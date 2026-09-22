@@ -12,6 +12,11 @@ preprocessing:
 
 segmentation:
   model_type: "fastsam"          # Options: fastsam, watershed_fallback
+  weights: "models/FastSAM-s.pt" # CPU default; switch to models/FastSAM-x.pt for a larger model
+  imgsz: 1024
+  sam_conf: 0.25
+  sam_iou: 0.9
+  min_mask_confidence: 0.35      # Below this, a seed falls back to watershed
   min_room_area_px: 2000         # Filter out small furniture/plant masks
 
 geometry:
