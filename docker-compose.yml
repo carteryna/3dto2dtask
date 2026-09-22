@@ -8,6 +8,8 @@ services:
       - ./inout_data:/app/inout_data
       - ./data/output:/app/data/output
       - ./configs:/app/configs
+      - ./src:/app/src
+      - ./scripts:/app/scripts
     environment:
       - PYTHONUNBUFFERED=1
     command: python -c "print('Phase 1 Scaffolding Environment Ready!')"
