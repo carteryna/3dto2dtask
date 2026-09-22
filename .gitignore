@@ -1,0 +1,79 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Type checkers and linters
+.mypy_cache/
+.ruff_cache/
+.pytype/
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Model weights downloaded at runtime
+*.pt
+*.pth
+*.onnx
+
+# Generated outputs (keep the directory placeholder)
+data/output/*
+!data/output/.gitkeep
+
+# Local floor-plan renders (keep the placeholder and any sample files)
+inout_data/*
+!inout_data/.gitkeep
+!inout_data/*sample*
+!inout_data/samples/
+!inout_data/samples/**
+
+PROJECT_PLAN.md

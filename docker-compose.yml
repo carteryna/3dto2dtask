@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  cv-floorplan:
+    build: .
+    container_name: cv_floorplan_container
+    volumes:
+      - ./inout_data:/app/inout_data
+      - ./data/output:/app/data/output
+      - ./configs:/app/configs
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python -c "print('Phase 1 Scaffolding Environment Ready!')"

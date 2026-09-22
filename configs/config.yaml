@@ -1,0 +1,23 @@
+pipeline:
+  device: "cpu"  # Default to CPU for docker portability
+  save_debug_masks: true
+
+preprocessing:
+  wall_hsv_min: [0, 0, 180]      # Light-gray / white wall top detection
+  wall_hsv_max: [180, 40, 255]
+  door_closing_kernel_size: 15   # Kernel size to bridge 45-degree door gaps
+  bilateral_d: 9
+  bilateral_sigma_color: 75
+  bilateral_sigma_space: 75
+
+segmentation:
+  model_type: "fastsam"          # Options: fastsam, watershed_fallback
+  min_room_area_px: 2000         # Filter out small furniture/plant masks
+
+geometry:
+  douglas_peucker_epsilon: 0.015 # Contour simplification factor
+  ortho_snap_tolerance_deg: 10.0 # Snap line segments within +/- 10 degrees to 0/90
+
+ocr:
+  enabled: true
+  languages: ["en"]
