@@ -42,6 +42,7 @@ class RoomSegmenter:
         self._confidences: list[float] = []
         self.raw_sam_masks: list[np.ndarray] = []
         self.fallback_count = 0
+        self.mask_confidences: list[float] = []
 
     def segment(
         self,
@@ -188,6 +189,7 @@ class RoomSegmenter:
         confidence region, with distance to that region's seed as the tie break.
         """
         if not raw_masks:
+            self.mask_confidences = []
             return []
 
         height, width = raw_masks[0].shape[:2]
@@ -203,6 +205,7 @@ class RoomSegmenter:
             confidence = self._confidences[index] if index < len(self._confidences) else 1.0
             kept_conf.append(float(confidence))
         if not kept:
+            self.mask_confidences = []
             return []
 
         score = np.full((len(kept), height, width), -np.inf, dtype=np.float32)
@@ -215,10 +218,13 @@ class RoomSegmenter:
         winner = np.argmax(score, axis=0)
         claimed = np.isfinite(score.max(axis=0))
         cleaned: list[np.ndarray] = []
+        confidences: list[float] = []
         for index in range(len(kept)):
             mask = np.where((winner == index) & claimed, 255, 0).astype(np.uint8)
             if int(np.count_nonzero(mask)) >= min_area:
                 cleaned.append(mask)
+                confidences.append(kept_conf[index])
+        self.mask_confidences = confidences
         return cleaned
 
     def _load_fastsam(self):

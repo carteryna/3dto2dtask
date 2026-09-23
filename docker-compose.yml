@@ -10,6 +10,7 @@ services:
       - ./configs:/app/configs
       - ./src:/app/src
       - ./scripts:/app/scripts
+      - ./main.py:/app/main.py
       - ./models:/app/models
     environment:
       - PYTHONUNBUFFERED=1

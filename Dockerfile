@@ -20,5 +20,6 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY configs/ ./configs/
 COPY src/ ./src/
 COPY scripts/ ./scripts/
+COPY main.py ./main.py
 
 CMD ["python", "-c", "print('Phase 1 Scaffolding Environment Ready!')"]
