@@ -22,10 +22,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.geometry import GeometryRegularizer
-from src.ocr import OCRScaleParser
-from src.preprocessing import WallExtractor
-from src.segmentation import RoomSegmenter
+from src.v1_baseline.geometry import GeometryRegularizer
+from src.v1_baseline.ocr import OCRScaleParser
+from src.v1_baseline.preprocessing import WallExtractor
+from src.v1_baseline.segmentation import RoomSegmenter
 
 IMAGE_EXTENSIONS = {".webp", ".png", ".jpg", ".jpeg", ".bmp"}
 INPUT_DIR = ROOT / "inout_data"

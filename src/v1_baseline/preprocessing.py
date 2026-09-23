@@ -11,7 +11,7 @@ import yaml
 
 
 def _default_config_path() -> Path:
-    return Path(__file__).resolve().parents[1] / "configs" / "config.yaml"
+    return Path(__file__).resolve().parents[2] / "configs" / "config.yaml"
 
 
 def _as_odd(size: int) -> int:

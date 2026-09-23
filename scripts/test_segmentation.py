@@ -21,8 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.preprocessing import WallExtractor
-from src.segmentation import RoomSegmenter
+from src.v1_baseline.preprocessing import WallExtractor
+from src.v1_baseline.segmentation import RoomSegmenter
 
 IMAGE_EXTENSIONS = {".webp", ".png", ".jpg", ".jpeg", ".bmp"}
 INPUT_DIR = ROOT / "inout_data"

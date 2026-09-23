@@ -4,6 +4,42 @@ Exploratory pipeline that turns a top-down 3D apartment render into regularized 
 
 The design is wall-first. Floor textures, rugs, and furniture break color segmentation, so the structural path closes the wall network before any room is labeled. A vision model proposes floor regions, and classical watershed fills the seeds that the model misses. Shapely then snaps the boundaries toward a Manhattan plan.
 
+## 🔬 R&D Methodology & Iterative Progression
+
+To solve the 3D Floor Plan to 2D Layout task, this project was developed across two distinct R&D stages:
+
+### Stage 1: Exploratory Baseline & Diagnostic Phase (Iteration 1)
+
+- **Objective:** Build an exploratory pipeline using classical CV (`OpenCV`), zero-shot vision-foundation segmentation (`FastSAM`), vector processing (`Shapely`), and scale text parsing (`EasyOCR`)[cite: 1, 2, 3].
+- **Key Feasibility Insights Gained:**
+  1. *Perspective Distortion:* Direct pixel masking on 3D renders retains camera skew; true 2D plans require homography warping prior to segmentation[cite: 4].
+  2. *Wall Top vs. Floor Seam:* Isolating light-gray/white wall tops causes a spatial offset due to 3D wall height extrusion[cite: 1, 4]. True boundaries must target floor-wall base seams[cite: 4].
+  3. *Contour Tracing vs. Rectilinear Fitting:* Tracing pixel contours creates jagged cutouts around furniture and rugs (e.g., 12 fragmented polygons on `limestone ranch`)[cite: 5, 6]. 2D blueprints require fitting orthogonal bounding boxes (`cv2.minAreaRect`).
+  4. *Heuristic Scale Anchoring:* OCR callouts provide high accuracy when present (10.683 px/ft on `heritage towers`)[cite: 1], but missing text requires fallback scale anchors using standard architectural priors (60cm countertops, 80cm doorways, 150cm bathtubs).
+
+### Stage 2: True 2D Blueprint Reconstruction Engine (Iteration 2 — Target Execution)
+
+- **Objective:** Pivot from 3D perspective masking to synthetic 2D CAD blueprint generation.
+- **Core Architecture Changes:**
+  - **Homography Matrix:** Un-warp 3D renders into flat, orthographic top-down projections (`cv2.getPerspectiveTransform`).
+  - **Floor-Seam Base Detection:** Anchor room perimeters directly to the walkable floor-wall junction.
+  - **Rectilinear Room Fitting:** Replace contour simplification with Manhattan grid-aligned rectangular box fitting.
+  - **Synthetic Blueprint Rendering:** Generate clean, publication-ready black-and-white 2D vector layouts filled with room labels, scale ratios, and area metrics.
+
+### 📐 Heuristic Scale Prior Engine (Fallback Scale System)
+
+When OCR dimension parsing returns `None` (as in `highlandlux-citadel` and `limestone ranch`)[cite: 2, 3], the pipeline falls back to an Architectural Heuristic Prior System:
+
+- **Standard Anchor Dimensions:**
+  - **Kitchen Countertop Depth:** $60\text{ cm}$ ($24\text{ in}$)
+  - **Standard Doorway Width:** $80\text{ cm}$ ($32\text{ in}$)
+  - **Standard Bathtub Length:** $150\text{ cm}$ ($60\text{ in}$)
+  - **Toilet Bowl Width:** $40\text{ cm}$ ($15.5\text{ in}$)
+- **Consensus Scale Calculation:**
+  For detected anchor objects, compute candidate scale ratios:
+  $$S_i = \frac{\text{Standard Real Dimension (cm)}}{\text{Pixel Dimension (px)}}$$
+  The global image scale $S_{\text{final}}$ is set to $\text{Median}(S_1, S_2, \dots, S_n)$ to eliminate outlier detections.
+
 ## Architecture
 
 ```text

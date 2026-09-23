@@ -11,16 +11,16 @@ import cv2
 import numpy as np
 from shapely.geometry import Polygon
 
-from src.geometry import GeometryRegularizer
 from src.metrics import (
     compute_boundary_iou,
     compute_iou,
     compute_orthogonality_deviation,
     compute_relative_area_error,
 )
-from src.ocr import OCRScaleParser
-from src.preprocessing import WallExtractor
-from src.segmentation import RoomSegmenter
+from src.v1_baseline.geometry import GeometryRegularizer
+from src.v1_baseline.ocr import OCRScaleParser
+from src.v1_baseline.preprocessing import WallExtractor
+from src.v1_baseline.segmentation import RoomSegmenter
 from src.visualizer import PipelineVisualizer
 
 IMAGE_EXTENSIONS = {".webp", ".png", ".jpg", ".jpeg", ".bmp"}
@@ -33,10 +33,16 @@ def parse_args() -> argparse.Namespace:
     source.add_argument("--input_dir", help="Directory of floor-plan images to process as a batch.")
     parser.add_argument("--output_dir", default="data/output", help="Directory for result.json and annotated overlays.")
     parser.add_argument(
+        "--version",
+        choices=("v1", "v2"),
+        default="v2",
+        help="v1 runs the Iteration 1 exploratory baseline; v2 is the Iteration 2 reconstruction engine.",
+    )
+    parser.add_argument(
         "--method",
         choices=("hybrid", "watershed"),
         default="hybrid",
-        help="hybrid runs FastSAM with a watershed fallback; watershed uses the classical fallback only.",
+        help="v1 only: hybrid runs FastSAM with a watershed fallback; watershed uses the classical fallback only.",
     )
     parser.add_argument("--config", default=None, help="Path to configs/config.yaml.")
     return parser.parse_args()
@@ -285,8 +291,8 @@ def aggregate_metrics(rows: list[dict]) -> dict:
     }
 
 
-def main() -> None:
-    args = parse_args()
+def run_v1(args: argparse.Namespace) -> None:
+    """Iteration 1 exploratory baseline: perspective-space room extraction."""
     config_path = args.config
     extractor = WallExtractor(config_path)
     segmenter = RoomSegmenter(config_path)
@@ -320,6 +326,22 @@ def main() -> None:
         f"ortho_hybrid={summary['hybrid_orthogonality_deg']} "
         f"ortho_watershed={summary['watershed_orthogonality_deg']}"
     )
+
+
+def run_v2(args: argparse.Namespace) -> None:
+    """Iteration 2 true-2D blueprint reconstruction (not yet implemented)."""
+    raise SystemExit(
+        "Iteration 2 (--version v2) is not implemented yet. "
+        "Run the archived baseline with --version v1."
+    )
+
+
+def main() -> None:
+    args = parse_args()
+    if args.version == "v1":
+        run_v1(args)
+    else:
+        run_v2(args)
 
 
 if __name__ == "__main__":

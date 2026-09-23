@@ -14,7 +14,7 @@ from shapely.ops import unary_union
 
 
 def _default_config_path() -> Path:
-    return Path(__file__).resolve().parents[1] / "configs" / "config.yaml"
+    return Path(__file__).resolve().parents[2] / "configs" / "config.yaml"
 
 
 def _largest_polygon(geometry) -> Polygon:
