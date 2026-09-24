@@ -157,3 +157,27 @@ v3_scale:
 # Iteration 3 Phase 5 (src/v3_topology/visualizer.py)
 v3_blueprint:
   wall_thickness_px: 5          # Stroke width stands in for wall thickness
+
+# Iteration 4 Phase 1 (src/v4_cad_arrangement/calibration.py)
+v4_calibration:
+  min_line_length_px: 30        # Ignore short texture lines when finding vanishing points
+  vert_angle_tolerance_deg: 25  # Lines within this angle of vertical are vertical candidates
+  horiz_angle_tolerance_deg: 15 # Lines within this angle of horizontal are horizontal candidates
+  max_orthographic_vy: 50000.0  # If |vy| exceeds this, view is treated as purely orthographic
+  border_value: [255, 255, 255] # Background fill for rectified canvas
+
+# Iteration 4 Phase 2 (src/v4_cad_arrangement/objects.py)
+v4_objects:
+  proposal_conf: 0.30           # Object proposal threshold
+  tub_hue_min: 85               # Blue water Hue range
+  tub_hue_max: 135
+  tub_sat_min: 35
+  tub_min_area_px: 1500
+  tub_max_area_px: 15000
+  tub_min_aspect: 1.25
+  bed_min_area_px: 4500
+  bed_min_dim_px: 65
+  sofa_min_area_px: 2500
+  toilet_min_area_px: 250
+  toilet_max_area_px: 1800
+
