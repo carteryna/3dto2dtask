@@ -65,3 +65,22 @@ floor_segmentation:
   floor_min_coverage: 0.5        # Below this, SAM missed the floor; keep the wall-top cell
   seam_gradient_percentile: 80
   seam_tolerance_px: 3
+
+rectilinear:
+  notch_max_inradius_px: 30      # Bbox gaps thinner than this are furniture notches, not missing corners
+  corner_min_share: 0.12         # A missing corner must be at least this share of the bounding box
+  rect_fill_min: 0.72            # Above this, one bounding box overwrites the notches
+  decompose_min_area_px: 18000   # Smaller masks are one room; do not peel arms off them
+  arm_min_share: 0.10            # Leftover pieces smaller than this are notches, not a second room
+  grow_coverage: 0.60            # A rectangle side grows while the new strip is this full of mask
+  leftover_fill_min: 0.35        # Denser leftovers become their bounding box, filling table holes
+  min_rect_area_px: 2000
+  max_rects_per_mask: 3
+  open_plan_area_ratio: 0.22     # Rectangles larger than this share of the floor are split candidates
+  seam_blur_px: 31               # Kills furniture edges so only wall-to-wall material changes remain
+  seam_margin_ratio: 0.12        # Ignore gradients in the outer band (those are the walls)
+  seam_span_min: 0.55            # A seam must be strong across this fraction of the rectangle
+  seam_prominence_min: 2.0       # Peak column/row step must be this many times the median step
+  seam_delta_e_min: 8.0          # Min LAB distance between the two sides of a split
+  grid_snap_tolerance_px: 15
+  min_side_px: 12

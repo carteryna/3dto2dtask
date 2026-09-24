@@ -50,7 +50,7 @@ Run with `python main.py --version v2` (the default). `--version v1` still runs 
 | --- | --- | --- |
 | 1 | `homography.py` | Done (QA: `scripts/v2_test_homography.py`) |
 | 2 | `segmentation.py` | Done (QA: `scripts/v2_test_segmentation.py`) |
-| 3 | `geometry.py` | Stub |
+| 3 | `geometry.py` | Done (QA: `scripts/v2_test_geometry.py`) |
 | 4 | `scale.py` | Stub |
 | 5 | `visualizer.py` | Stub |
 
@@ -152,3 +152,47 @@ Seam alignment is the share of mask boundary pixels within 3 px of a strong colo
 - A patch of floor enclosed by a bright rug that also touches a wall recess is not merged back (limestone's coffee-table area stays its own region). The enclosed-region merge only handles rings that close on themselves.
 - Masks follow furniture that touches the walls (beds, counters, bathtubs), so outlines are notched. Rectilinear fitting in Phase 3 is expected to remove these notches.
 - Thresholds were tuned on three renders from two render styles. A larger labelled set is needed before these values can be trusted.
+
+### Phase 3: Rectilinear room fitting
+
+**Deliverables**
+
+- `src/v2_reconstruction/geometry.py`: `RectilinearFitter` with `fit_bounding_rectangles`, `split_open_plan_areas`, and `snap_to_global_grid`. `fit(masks, flattened)` runs all three and returns shapely rectangles.
+- `configs/config.yaml`: new `rectilinear:` section.
+- `scripts/v2_test_geometry.py`: writes `08_raw_rectangles.png` (after the material split, before the grid) and `09_grid_snapped_rectangles.png`.
+
+**Pipeline**
+
+1. Each mask is filled, then fitted with `cv2.minAreaRect`. When the box leans by at most 10° it is snapped to 0° or 90°; otherwise the axis-aligned bounding box is used, because the canvas axes are already the architectural axes.
+2. A mask that fills at least 72% of that box, or is smaller than 18,000 px, becomes one rectangle. Furniture notches are overwritten by the box.
+3. A larger mask with a thick missing corner (at least 12% of the box and deeper than 30 px) is an L-shape or an open plan. The largest inscribed rectangle is grown back through notches, and each large leftover wing becomes its own rectangle. Wings from the same mask may overlap; that union is the L.
+4. A rectangle larger than 22% of the fitted floor is checked for a wall-to-wall colour step. The step must be strong in most of eight bins along the cut (so a sofa does not count) and the two sides must differ by at least 8 in LAB. The rectangle is cut there.
+5. Every x and y edge within 15 px is replaced by the median of that cluster. Overlaps between different rooms are pulled back to the shared edge. Overlaps inside one mask are kept.
+
+**Results**
+
+| Render | Masks | Rectangles before split | After split | Snapped | Shared edges | Cross-room overlap |
+| --- | --- | --- | --- | --- | --- | --- |
+| heritage towers | 7 | 11 | 12 | 12 | 11 | 0 px |
+| highlandlux citadel | 8 | 11 | 11 | 11 | 14 | 0 px |
+| limestone ranch | 8 | 13 | 13 | 13 | 13 | 0 px |
+
+- Bedrooms, bathrooms, closets, and the laundry niche are single rectangles. Their outlines no longer follow beds, toilets, or counters.
+- Heritage's open living mask becomes the wood-floor rectangle, a sofa wing, and a kitchen rectangle cut on the material step.
+- Highland's open mask becomes a living rectangle, a dining rectangle, and a kitchen rectangle. They overlap where the wings meet.
+- Limestone's open mask becomes a sofa column, a kitchen rectangle, and a living-room strip. The bedroom, closet, and bath are separate rectangles on the same grid.
+
+**Insights**
+
+- **The bounding box is the right default.** Pixel notches are shallow. One axis-aligned box removes them. Decomposing every concave mask shattered bedrooms into furniture-shaped fragments.
+- **An L-shape is a thick missing corner, not a low fill ratio.** Fill alone cannot tell a bed notch from a real wing. The corner has to be both large (12% of the box) and deep (inradius above 30 px), and the mask has to be large, before a second rectangle is peeled off.
+- **The inscribed rectangle must be grown back.** The largest interior rectangle stops at the first notch, so the sofa wing and the kitchen were left as scraps. Growing each side while the new strip is still 60% floor recovers the wing without crossing into the other arm.
+- **Colour seams only show up on a rectangle that still contains both materials.** The span test has to be binned. A median threshold is passed by about half the pixels on every line, so it rejected real wood-to-carpet steps (limestone's two sides differ by about 28 in LAB) and would also have accepted a sofa. After the fix, heritage's kitchen is cut out of the living rectangle. Highland and limestone were already separated by the wing split, so the colour cut correctly did nothing.
+- **Grid snapping removes gaps between different rooms and does not remove an L overlap.** Edges within 15 px land on one median line. Cross-room overlap is 0 px on all three renders. Same-mask wings still overlap, which is the union the L-shape is built from.
+
+**Known limitations**
+
+- Limestone's coffee-table carpet stays outside the rectangles. Phase 2 left that patch as its own cell, and the ring of carpet around it is too thin for another room rectangle.
+- Highland's kitchen rectangle covers the cabinet run, not the whole tile floor in front of it. The dining rectangle overlaps it instead of stopping on the tile line.
+- Heritage's balcony is still three rectangles, because Phase 2 split it on the railing. Phase 3 does not merge those cells.
+- A colour split can only cut a rectangle with a straight, wall-to-wall seam. A diagonal material change, or two seams meeting in a T inside one rectangle, is left for a later pass.
