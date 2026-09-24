@@ -133,3 +133,27 @@ v3_segmentation:
   absorb_contact_min: 0.55       # Outline share that must touch the recovered floor before a blob is dropped
   interior_erode_px: 35          # Floor must sit inside the building, not on the outer wall band
   interior_min_fraction: 0.40
+
+# Iteration 3 Phase 2 (src/v3_topology/topology.py)
+v3_topology:
+  marker_radius_px: 3            # Disk drawn at each room centroid before the watershed
+  min_cell_area_px: 200          # Smaller unseeded specks are absorbed into the nearest room
+
+# Iteration 3 Phase 3 (src/v3_topology/geometry.py)
+v3_geometry:
+  approx_epsilon_px: 8           # Simplify a cell contour before it becomes line segments
+  min_segment_px: 12             # Drop outline noise shorter than this
+  coord_snap_px: 12              # Parallel walls this close share one coordinate and one corner
+  min_polygon_area_px: 1500      # Faces smaller than this are slivers, not rooms
+
+# Iteration 3 Phase 4 (src/v3_topology/scale.py)
+v3_scale:
+  cm_per_foot: 30.48
+  toilet_width_cm: 40           # Bowl width, the shorter side of a YOLOv8n toilet box
+  bathtub_length_cm: 150        # Long side, used only if the weights include a bathtub class
+  weights: "models/yolov8n.pt"
+  fixture_conf: 0.25
+
+# Iteration 3 Phase 5 (src/v3_topology/visualizer.py)
+v3_blueprint:
+  wall_thickness_px: 5          # Stroke width stands in for wall thickness

@@ -26,6 +26,11 @@ from src.v2_reconstruction.homography import PerspectiveCorrector
 from src.v2_reconstruction.scale import ScaleEstimator, rooms_from_rects
 from src.v2_reconstruction.segmentation import FloorSeamSegmenter
 from src.v2_reconstruction.visualizer import BlueprintRenderer
+from src.v3_topology.geometry import ManhattanLineGraph
+from src.v3_topology.scale import AreaScaleEstimator
+from src.v3_topology.segmentation import FloorSegmenter
+from src.v3_topology.topology import TopologyPartitioner
+from src.v3_topology.visualizer import TopologyBlueprint
 from src.visualizer import PipelineVisualizer
 
 IMAGE_EXTENSIONS = {".webp", ".png", ".jpg", ".jpeg", ".bmp"}
@@ -492,12 +497,88 @@ def run_v2(args: argparse.Namespace) -> None:
     print(f"Wrote {result_path}")
 
 
+def v3_payload(
+    image_name: str,
+    shape: tuple[int, int],
+    rooms: list[dict],
+    scale: float | None,
+    source: str,
+    filename_sqft: float | None,
+) -> dict:
+    height, width = int(shape[0]), int(shape[1])
+    export = []
+    for room in rooms:
+        polygon: Polygon = room["polygon"]
+        export.append(
+            {
+                "room_id": int(room["room_id"]),
+                "pixel_area": int(round(room["pixel_area"])),
+                "relative_area_pct": round(float(room["relative_area_pct"]), 2),
+                "area_sqft": None if room["area_sqft"] is None else round(float(room["area_sqft"]), 1),
+                "centroid": [round(room["centroid"][0], 1), round(room["centroid"][1], 1)],
+                "polygon_vertices": [[int(x), int(y)] for x, y in polygon.exterior.coords],
+                "holes": [[[int(x), int(y)] for x, y in ring.coords] for ring in polygon.interiors],
+            }
+        )
+    return {
+        "metadata": {
+            "image_name": image_name,
+            "dimensions": {"width": width, "height": height},
+            "pipeline_method": "v3_shared_edge_topology",
+            "scale_px_per_ft": None if scale is None else round(float(scale), 4),
+            "scale_source": source,
+            "filename_sqft": filename_sqft,
+            "total_detected_rooms": len(export),
+        },
+        "rooms": export,
+    }
+
+
+def reconstruct_v3(image: np.ndarray, image_name: str, config_path: str | None) -> tuple[np.ndarray, dict]:
+    """Segment, partition, orthogonalize, scale, and draw one blueprint."""
+    segmenter = FloorSegmenter(config_path)
+    partitioner = TopologyPartitioner(config_path)
+    graph = ManhattanLineGraph(config_path)
+    estimator = AreaScaleEstimator(config_path)
+    renderer = TopologyBlueprint(config_path)
+
+    masks = segmenter.segment(image)
+    footprint = segmenter.walkable_footprint(masks)
+    cells = partitioner.partition(footprint, partitioner.seeds(masks), masks)
+    polygons = graph.polygons(graph.orthogonalize(graph.extract_segments(cells)))
+    scale = estimator.estimate(polygons, image_name, image)
+    result = estimator.result
+    source = result.source if result is not None else "none"
+    filename_sqft = None if result is None else result.sqft
+    rooms = renderer.rooms(polygons, scale)
+    blueprint = renderer.render(image.shape[:2], polygons, scale)
+    return blueprint, v3_payload(image_name, image.shape[:2], rooms, scale, source, filename_sqft)
+
+
 def run_v3(args: argparse.Namespace) -> None:
-    """Iteration 3 shared-edge reconstruction (not yet implemented)."""
-    raise SystemExit(
-        "Iteration 3 (--version v3) is not implemented yet. "
-        "Run Iteration 2 with --version v2, or the archived baseline with --version v1."
-    )
+    """Iteration 3: shared-edge rooms, filename scale, and a white blueprint."""
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    payloads = []
+    for image_path in list_images(args.input, args.input_dir):
+        image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+        if image is None:
+            raise FileNotFoundError(f"Could not read image: {image_path}")
+        blueprint, payload = reconstruct_v3(image, image_path.name, args.config)
+        blueprint_path = output_dir / f"blueprint_v3_{image_path.stem}.png"
+        cv2.imwrite(str(blueprint_path), blueprint)
+        payloads.append(payload)
+        scale = payload["metadata"]["scale_px_per_ft"]
+        labeled = sum(room["area_sqft"] or 0 for room in payload["rooms"])
+        print(
+            f"{image_path.name}: rooms={payload['metadata']['total_detected_rooms']} "
+            f"scale={scale} px/ft source={payload['metadata']['scale_source']} "
+            f"labeled_sqft={round(labeled, 1)} -> {blueprint_path}"
+        )
+    result_path = output_dir / "result_v3.json"
+    document = payloads[0] if len(payloads) == 1 else payloads
+    result_path.write_text(json.dumps(document, indent=2), encoding="utf-8")
+    print(f"Wrote {result_path}")
 
 
 def main() -> None:
