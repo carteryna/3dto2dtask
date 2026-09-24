@@ -26,3 +26,18 @@ geometry:
 ocr:
   enabled: true
   languages: ["en"]
+
+# Iteration 2 (src/v2_reconstruction)
+homography:
+  canvas_lightness_min: 250      # LAB lightness of the white render background
+  canvas_chroma_max: 8
+  canny_low: 50
+  canny_high: 150
+  footprint_close_px: 15         # Seals small gaps in the apartment silhouette
+  approx_epsilon_start: 0.01     # approxPolyDP epsilon as a fraction of perimeter
+  approx_epsilon_max: 0.12       # Upper bound for the convex-hull fallback quad
+  min_wall_length_ratio: 0.15    # Outline segments shorter than this x sqrt(footprint area) are ignored
+  wall_axis_tolerance_deg: 25.0  # Max lean of an exterior wall from horizontal/vertical in the render
+  side_fit_band_ratio: 0.005     # Contour points within this fraction of perimeter refine each wall line
+  max_area_change_ratio: 1.6     # Reject homographies that scale the footprint area beyond this
+  output_margin_px: 20
