@@ -21,6 +21,11 @@ from src.v1_baseline.geometry import GeometryRegularizer
 from src.v1_baseline.ocr import OCRScaleParser
 from src.v1_baseline.preprocessing import WallExtractor
 from src.v1_baseline.segmentation import RoomSegmenter
+from src.v2_reconstruction.geometry import RectilinearFitter
+from src.v2_reconstruction.homography import PerspectiveCorrector
+from src.v2_reconstruction.scale import ScaleEstimator, rooms_from_rects
+from src.v2_reconstruction.segmentation import FloorSeamSegmenter
+from src.v2_reconstruction.visualizer import BlueprintRenderer
 from src.visualizer import PipelineVisualizer
 
 IMAGE_EXTENSIONS = {".webp", ".png", ".jpg", ".jpeg", ".bmp"}
@@ -328,12 +333,163 @@ def run_v1(args: argparse.Namespace) -> None:
     )
 
 
-def run_v2(args: argparse.Namespace) -> None:
-    """Iteration 2 true-2D blueprint reconstruction (not yet implemented)."""
-    raise SystemExit(
-        "Iteration 2 (--version v2) is not implemented yet. "
-        "Run the archived baseline with --version v1."
+def _feet_inches(cm: float) -> str:
+    total_inches = float(cm) / 2.54
+    feet = int(total_inches // 12)
+    inches = int(round(total_inches - feet * 12))
+    if inches == 12:
+        feet += 1
+        inches = 0
+    return f"{feet}'{inches}\""
+
+
+def _dimension_text(record: dict, rect: dict, pixels_per_cm: float | None) -> str:
+    pixel_w = float(rect["w"])
+    pixel_h = float(rect["h"])
+    pixel_aspect = pixel_w / pixel_h if pixel_h else 0.0
+    for dimension in record.get("dimensions") or []:
+        width_ft = float(dimension.get("width_ft") or 0.0)
+        height_ft = float(dimension.get("height_ft") or 0.0)
+        if width_ft <= 0 or height_ft <= 0 or pixel_aspect <= 0:
+            continue
+        direct = abs(pixel_aspect - (width_ft / height_ft))
+        swapped = abs(pixel_aspect - (height_ft / width_ft))
+        # A callout pasted onto a wing of the wrong shape is left off the drawing.
+        if min(direct, swapped) > 0.4:
+            continue
+        if swapped < direct:
+            width_ft, height_ft = height_ft, width_ft
+        return f"{_feet_inches(width_ft * 30.48)} x {_feet_inches(height_ft * 30.48)}"
+    if pixels_per_cm is None or pixels_per_cm <= 0:
+        return ""
+    return f"{_feet_inches(pixel_w / pixels_per_cm)} x {_feet_inches(pixel_h / pixels_per_cm)}"
+
+
+def build_v2_rooms(rects: list[dict], records: list[dict], pixels_per_cm: float | None, sqft_per_sqcm: float) -> list[dict]:
+    areas = [max(int(rect["w"]), 0) * max(int(rect["h"]), 0) for rect in rects]
+    total = sum(areas) or 1
+    rooms = []
+    for index, rect in enumerate(rects):
+        record = records[index] if index < len(records) else {}
+        labels = [str(label).strip() for label in record.get("labels", []) if str(label).strip()]
+        pixel_area = areas[index]
+        area_sqft = None
+        width_cm = None
+        height_cm = None
+        if pixels_per_cm and pixels_per_cm > 0:
+            width_cm = float(rect["w"]) / pixels_per_cm
+            height_cm = float(rect["h"]) / pixels_per_cm
+            area_sqft = width_cm * height_cm * sqft_per_sqcm
+        nominal = None
+        for dimension in record.get("dimensions") or []:
+            if dimension.get("area_sqft"):
+                nominal = float(dimension["area_sqft"])
+                break
+        rooms.append(
+            {
+                "x": int(rect["x"]),
+                "y": int(rect["y"]),
+                "w": int(rect["w"]),
+                "h": int(rect["h"]),
+                "label": ", ".join(labels) if labels else f"Room {index + 1}",
+                "dimensions": _dimension_text(record, rect, pixels_per_cm),
+                "relative_area_pct": 100.0 * pixel_area / total,
+                "pixel_area": pixel_area,
+                "width_cm": None if width_cm is None else round(width_cm, 1),
+                "height_cm": None if height_cm is None else round(height_cm, 1),
+                "area_sqft": None if area_sqft is None else round(area_sqft, 1),
+                "nominal_sqft": None if nominal is None else round(nominal, 1),
+            }
+        )
+    return rooms
+
+
+def v2_payload(image_name: str, shape: tuple[int, int], rooms: list[dict], scale: float | None, source: str) -> dict:
+    height, width = int(shape[0]), int(shape[1])
+    export = []
+    for index, room in enumerate(rooms, start=1):
+        x, y, room_w, room_h = int(room["x"]), int(room["y"]), int(room["w"]), int(room["h"])
+        export.append(
+            {
+                "room_id": index,
+                "label": room["label"],
+                "dimensions": room["dimensions"],
+                "pixel_area": int(room["pixel_area"]),
+                "relative_area_pct": round(float(room["relative_area_pct"]), 2),
+                "width_cm": room["width_cm"],
+                "height_cm": room["height_cm"],
+                "area_sqft": room["area_sqft"],
+                "nominal_sqft": room["nominal_sqft"],
+                "polygon_vertices": [[x, y], [x + room_w, y], [x + room_w, y + room_h], [x, y + room_h]],
+                "bbox": [x, y, x + room_w, y + room_h],
+            }
+        )
+    return {
+        "metadata": {
+            "image_name": image_name,
+            "dimensions": {"width": width, "height": height},
+            "pipeline_method": "v2_rectilinear_blueprint",
+            "scale_px_per_cm": None if scale is None else round(float(scale), 4),
+            "scale_source": source,
+            "total_detected_rooms": len(export),
+        },
+        "rooms": export,
+    }
+
+
+def reconstruct_v2(image: np.ndarray, image_name: str, config_path: str | None) -> tuple[np.ndarray, dict]:
+    """Flatten, segment, fit, scale, and draw one blueprint."""
+    corrector = PerspectiveCorrector(config_path)
+    segmenter = FloorSeamSegmenter(config_path)
+    fitter = RectilinearFitter(config_path)
+    estimator = ScaleEstimator(config_path)
+    renderer = BlueprintRenderer(config_path)
+    parser = OCRScaleParser(config_path)
+
+    flattened = corrector.correct(image).flattened
+    floors = segmenter.segment(flattened)
+    tolerance = int(fitter.params["grid_snap_tolerance_px"])
+    rects = fitter.snap_to_global_grid(
+        fitter.split_open_plan_areas(fitter.fit_bounding_rectangles(floors), flattened),
+        tolerance,
     )
+    polygons = rooms_from_rects(rects)
+    scale = estimator.estimate(flattened, polygons)
+    source = estimator.result.source if estimator.result is not None else "none"
+    try:
+        boxes = parser.extract_text_boxes(flattened)
+        parser.parse_dimensions(boxes)
+        records = parser.associate_text_with_polygons(polygons, boxes)
+    except Exception as exc:
+        print(f"OCR labels failed ({exc}); rooms stay unlabeled.")
+        records = []
+    rooms = build_v2_rooms(rects, records, scale, float(renderer.params["sqft_per_sqcm"]))
+    blueprint = renderer.render(flattened.shape[:2], rooms)
+    return blueprint, v2_payload(image_name, flattened.shape[:2], rooms, scale, source)
+
+
+def run_v2(args: argparse.Namespace) -> None:
+    """Iteration 2: flatten, fit rectilinear rooms, and write a CAD blueprint."""
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    payloads = []
+    for image_path in list_images(args.input, args.input_dir):
+        image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+        if image is None:
+            raise FileNotFoundError(f"Could not read image: {image_path}")
+        blueprint, payload = reconstruct_v2(image, image_path.name, args.config)
+        blueprint_path = output_dir / f"blueprint_{image_path.stem}.png"
+        cv2.imwrite(str(blueprint_path), blueprint)
+        payloads.append(payload)
+        print(
+            f"{image_path.name}: rooms={payload['metadata']['total_detected_rooms']} "
+            f"scale={payload['metadata']['scale_px_per_cm']} px/cm "
+            f"source={payload['metadata']['scale_source']} -> {blueprint_path}"
+        )
+    result_path = output_dir / "result_v2.json"
+    document = payloads[0] if len(payloads) == 1 else payloads
+    result_path.write_text(json.dumps(document, indent=2), encoding="utf-8")
+    print(f"Wrote {result_path}")
 
 
 def main() -> None:

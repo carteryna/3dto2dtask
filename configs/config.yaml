@@ -102,3 +102,7 @@ scale:
   tub_min_area_px: 350
   tub_max_area_px: 12000
   tub_min_aspect: 1.25
+
+blueprint:
+  wall_thickness_px: 5
+  sqft_per_sqcm: 0.00107639      # 1 / (30.48^2)

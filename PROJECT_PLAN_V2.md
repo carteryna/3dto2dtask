@@ -52,7 +52,7 @@ Run with `python main.py --version v2` (the default). `--version v1` still runs 
 | 2 | `segmentation.py` | Done (QA: `scripts/v2_test_segmentation.py`) |
 | 3 | `geometry.py` | Done (QA: `scripts/v2_test_geometry.py`) |
 | 4 | `scale.py` | Done (QA: `scripts/v2_test_scale.py`) |
-| 5 | `visualizer.py` | Stub |
+| 5 | `visualizer.py` | Done (QA: `scripts/v2_test_visualizer.py`, CLI: `main.py --version v2`) |
 
 Implementation proceeds one phase at a time; each phase starts only after the previous one is approved.
 
@@ -238,3 +238,40 @@ The three plans are all about 600 sq ft and flatten to similar canvases. Their s
 - Counter depth is implemented and did not fire on these three renders.
 - Highland's scale rests on two openings. One false opening moves the median more there than on heritage, which has four anchors.
 - OCR cannot be checked against a labeled room until a fitted rectangle actually matches a callout's aspect. Phase 5 can draw the implied dimensions and make that mismatch obvious.
+
+### Phase 5: Synthetic blueprint generation
+
+**Deliverables**
+
+- `src/v2_reconstruction/visualizer.py`: `BlueprintRenderer.render(shape, rooms)` draws a white sheet with black rectangle walls and a three-line label (name, dimensions, share of area).
+- `main.py`: `python main.py --version v2` runs Phases 1–5 and writes `blueprint_<stem>.png` plus `result_v2.json`.
+- `scripts/v2_test_visualizer.py`: writes `11_blueprint.png` under `data/output/debug_v2/<stem>/`.
+- `configs/config.yaml`: new `blueprint:` section (wall thickness, sqft conversion).
+
+**Pipeline**
+
+1. Flatten, segment, fit, and snap, using Phases 1–3.
+2. Estimate px/cm with Phase 4.
+3. EasyOCR labels (`Mech.`) are attached to the rectangle under the text. A dimension callout is printed only when the rectangle's aspect is within 0.4 of the callout; otherwise the size is `width_px / scale` by `height_px / scale`, formatted in feet and inches.
+4. Relative area is the rectangle's pixel area divided by the sum of the rectangles.
+5. `result_v2.json` stores four vertices per room, the bbox, pixel area, relative area, centimetre sides, heuristic square feet, and the nominal square feet when a callout parsed.
+
+**Results**
+
+| Render | Rooms | Scale | Blueprint |
+| --- | --- | --- | --- |
+| heritage towers | 12 | 0.425 px/cm | Bedroom keeps the printed `11'9" x 10'9"`. The mechanical closet is labeled `Mech.` |
+| highlandlux citadel | 11 | 0.419 px/cm | Every room uses the anchor scale. No callouts. |
+| limestone ranch | 13 | 0.438 px/cm | Every room uses the anchor scale. No callouts. |
+
+**Insights**
+
+- **The blueprint is only as rectangular as Phase 3.** Overlapping wings (heritage's kitchen and living room, highland's dining and living room) are drawn as two rectangles, so their walls cross. That is the L-shape union, not a tracing error.
+- **A callout is shown only when the rectangle has the same shape.** The living-room string `13'3" x 13'3"` was first drawn on the tall sofa wing. Aspect filtering sends that string off the drawing and leaves the heuristic size. The bedroom callout stays, because that rectangle is nearly square.
+- **Square footage sums to more than the advertised unit size.** Heritage's rectangles add up to about 2,000 sq ft against a 593 sq ft unit. The rectangles overlap, they include wall thickness, and 0.425 px/cm is only an anchor median. The JSON keeps both `area_sqft` (from that scale) and `nominal_sqft` (from a callout) so a later pass can prefer the printed number.
+
+**Known limitations**
+
+- Rooms are numbered, not named, unless OCR finds a short label. Furniture words are not filtered beyond the Iteration 1 label rules.
+- Crossed walls from overlapping rectangles are drawn as-is. Merging an L into one outline is not this phase.
+- The advertised unit area is not enforced. Nothing rescales the plan so the rooms sum to 593 or 625 sq ft.
