@@ -49,7 +49,7 @@ Run with `python main.py --version v2` (the default). `--version v1` still runs 
 | Phase | Module | Status |
 | --- | --- | --- |
 | 1 | `homography.py` | Done (QA: `scripts/v2_test_homography.py`) |
-| 2 | `segmentation.py` | Stub |
+| 2 | `segmentation.py` | Done (QA: `scripts/v2_test_segmentation.py`) |
 | 3 | `geometry.py` | Stub |
 | 4 | `scale.py` | Stub |
 | 5 | `visualizer.py` | Stub |
@@ -101,3 +101,54 @@ Implementation proceeds one phase at a time; each phase starts only after the pr
 - It assumes one dominant rectangle-like outer shell. Plans made of several disconnected units, or with strongly rotated wings, would need line clustering (for example with a Hough transform or vanishing-point estimation) instead of taking the longest segment per side.
 - The homography flattens the floor plane only approximately, because the footprint outline includes the wall tops. Output pixels keep roughly the input pixel scale but carry no real-world units yet; converting to real-world units is Phase 4.
 - The canvas detection relies on the white render background (LAB lightness ≥ 250). Renders on coloured or textured backgrounds would need a different footprint detector.
+
+### Phase 2: Floor-seam segmentation
+
+**Deliverables**
+
+- `src/v2_reconstruction/segmentation.py`: `FloorSeamSegmenter.segment(flattened)` returns one binary floor mask per room. A `SegmentationDebug` record on `segmenter.debug` exposes the footprint, wall ridges, barrier, room cells, seam edges, and the per-room source (`sam` or `cell`).
+- `configs/config.yaml`: new `floor_segmentation:` section. FastSAM weights and inference settings are reused from `segmentation:`.
+- `scripts/v2_test_segmentation.py`: runs Phase 1 then Phase 2 and writes `04_wall_ridges.png`, `05_room_cells.png`, `06_floor_sources.png` and `07_floor_masks.png` to `data/output/debug_v2/<stem>/`.
+
+**Pipeline**
+
+1. Footprint: the filled non-canvas silhouette of the flattened image.
+2. Wall pixels: a pixel must be flat (lightness standard deviation ≤ 4 in a 3×3 window) and match one of two cues:
+   - Shell colour: close in LAB to the median colour of the footprint's outer 15 px band, which is mostly exterior wall tops (a/b within 4, lightness within 25).
+   - Brightness top-hat: at least 18 lightness levels brighter than its surroundings, inside a structure narrower than 37 px.
+3. Wall cleanup: remove bright blobs wider than 37 px (counters, beds, tile floors). Keep only straight horizontal or vertical runs of at least 41 px, which is valid because Phase 1 made the walls axis-aligned.
+4. Barrier: bridge doorways up to 49 px along both axes, close 45° door leaves, add the outer shell, and keep only barrier pieces connected to the shell.
+5. Cells: the connected free space between barriers. Small regions fully enclosed by another room are merged into it. Furniture holes are filled. Regions joined by a passage narrower than 41 px are split with an opening plus a distance-map watershed. Cells thinner than a 12 px inradius are dropped.
+6. Floor refinement: FastSAM everything-mode proposals that lie at least 85% inside a cell and cover at least 8% of it are merged. The result replaces the cell if it covers at least half of it; otherwise the room keeps the cell.
+
+**Results**
+
+| Render | Rooms | From FastSAM / from cell | Trimmed by FastSAM | Seam alignment (cell → final) |
+| --- | --- | --- | --- | --- |
+| heritage towers | 7 | 1 / 6 | 0.1% | 0.765 → 0.764 |
+| highlandlux citadel | 8 | 1 / 7 | 0.7% | 0.657 → 0.662 |
+| limestone ranch | 8 | 4 / 4 | 4.4% | 0.692 → 0.703 |
+
+Seam alignment is the share of mask boundary pixels within 3 px of a strong colour gradient (top 20% of LAB Sobel magnitude inside the footprint).
+
+- Heritage separates the bedroom, bathroom and laundry niche. The walk-in closet is merged with the open living and kitchen area through its doorway, and the balcony is cut into three cells by the railing, so 7 masks describe 5 real spaces.
+- Highland separates the bathroom, walk-in closet, bedroom, balcony and three storage niches. The kitchen, hall and living room stay one open-plan region.
+- Limestone separates the bedroom, walk-in closet, bathroom, lower storage closet, and both balcony-side niches. The living room, kitchen, hallway and balcony form one region, the coffee-table patch is a false room, and the small upper storage shelf falls below the minimum room area.
+
+**Insights**
+
+- **Colour alone cannot tell walls from floors.** Measured LAB values showed that highland's bathroom tile (L≈230, chroma≈2) and balcony decking (L≈208, chroma≈0) share the wall-top palette. A global colour threshold, as in Iteration 1, either eats white floors or misses walls.
+- **Width and flatness separate what colour cannot.** Wall tops and faces are thin and untextured. Floors are wide, and bedding, curtains and decor are shaded or textured. A local flatness test plus a thickness limit removed most furniture false positives. The flatness window had to shrink from 7×7 to 3×3, because highland's wall tops are only about 8 px wide and a larger window straddles both edges.
+- **The render's own shell calibrates the wall colour.** Sampling the exterior band gives each render its wall colour (grey in heritage, white in limestone, cream in highland) with no manual tuning, and it catches wall faces, which share that colour.
+- **Phase 1 pays off here.** Because walls are axis-aligned after flattening, straight-run filtering and axis-aligned doorway bridging become valid. They remove curved and diagonal furniture edges that a plain top-hat kept.
+- **Doorway bridging needs a clean wall network first.** With noisy ridges, 49 px bridging welded curtains, text and beds to the walls, so a "connected to the shell" filter kept everything. The flatness and straight-run filters had to come first.
+- **Carving wall faces with FastSAM failed.** The first design removed thin proposals hugging walls as "wall faces". In practice FastSAM rarely proposes faces as separate masks, and faces of tall walls on the far side are 50–75 px deep. The accepted strips were TV consoles, shelving and counters. The final design builds floors from large proposals instead, and wall faces are handled by the shell-colour wall cue.
+- **The seam metric barely moves, and that is expected.** Since wall faces are now part of the barrier, cell boundaries already sit at the wall base. FastSAM changes the final masks by only 0.1–4.4%. In this design FastSAM refines the floor and is not the main segmenter.
+
+**Known limitations**
+
+- Wide openings are not closed. Limestone's balcony door and the kitchen passage merge the balcony, living room, kitchen and hallway into one region, highland's kitchen, hall and living room are one region, and heritage's walk-in closet leaks into the living area. Splitting open-plan areas needs a semantic cue such as a floor-material change, which fits naturally into Phase 3.
+- Balcony railings are straight bright runs, so heritage's balcony is cut into pieces. Phase 3 should merge adjacent cells separated only by thin, low-contrast barrier.
+- A patch of floor enclosed by a bright rug that also touches a wall recess is not merged back (limestone's coffee-table area stays its own region). The enclosed-region merge only handles rings that close on themselves.
+- Masks follow furniture that touches the walls (beds, counters, bathtubs), so outlines are notched. Rectilinear fitting in Phase 3 is expected to remove these notches.
+- Thresholds were tuned on three renders from two render styles. A larger labelled set is needed before these values can be trusted.

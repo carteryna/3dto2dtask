@@ -41,3 +41,27 @@ homography:
   side_fit_band_ratio: 0.005     # Contour points within this fraction of perimeter refine each wall line
   max_area_change_ratio: 1.6     # Reject homographies that scale the footprint area beyond this
   output_margin_px: 20
+
+floor_segmentation:
+  canvas_lightness_min: 250
+  canvas_chroma_max: 8
+  flat_window_px: 3              # Small enough to sit inside a thin (~8 px) wall top
+  flat_std_max: 4.0              # Wall tops and faces are untextured; bedding and curtains are shaded
+  wall_ab_tolerance: 4.0         # Max a/b distance from the shell (exterior wall) colour
+  wall_lightness_tolerance: 25.0
+  ridge_max_width_px: 37         # Bright regions wider than this are floors or counters, not walls
+  ridge_tophat_min: 18           # Min lightness excess over the local background for a wall top
+  ridge_lightness_min: 170
+  ridge_min_area_px: 60
+  ridge_min_aspect: 2.5          # Interior ridge pieces must be elongated unless they touch the shell
+  ridge_min_run_px: 41           # Walls are axis-aligned after Phase 1; keep straight runs at least this long
+  door_gap_px: 49                # Doorways narrower than this are bridged along the wall axis
+  neck_width_px: 41              # Passages narrower than this split one region into two rooms
+  neck_min_core_px: 600
+  cell_min_inradius_px: 12       # Thinner regions are wall slivers or the exterior face ring, not rooms
+  enclosed_max_share: 0.15       # Smaller regions enclosed by another room (rug or table rings) merge into it
+  floor_piece_min_inside: 0.85   # A SAM piece must lie at least this much inside the room cell
+  floor_piece_min_share: 0.08    # ...and cover at least this share of it (drops faces and decor)
+  floor_min_coverage: 0.5        # Below this, SAM missed the floor; keep the wall-top cell
+  seam_gradient_percentile: 80
+  seam_tolerance_px: 3
