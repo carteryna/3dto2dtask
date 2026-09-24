@@ -51,7 +51,7 @@ Run with `python main.py --version v2` (the default). `--version v1` still runs 
 | 1 | `homography.py` | Done (QA: `scripts/v2_test_homography.py`) |
 | 2 | `segmentation.py` | Done (QA: `scripts/v2_test_segmentation.py`) |
 | 3 | `geometry.py` | Done (QA: `scripts/v2_test_geometry.py`) |
-| 4 | `scale.py` | Stub |
+| 4 | `scale.py` | Done (QA: `scripts/v2_test_scale.py`) |
 | 5 | `visualizer.py` | Stub |
 
 Implementation proceeds one phase at a time; each phase starts only after the previous one is approved.
@@ -196,3 +196,45 @@ Seam alignment is the share of mask boundary pixels within 3 px of a strong colo
 - Highland's kitchen rectangle covers the cabinet run, not the whole tile floor in front of it. The dining rectangle overlaps it instead of stopping on the tile line.
 - Heritage's balcony is still three rectangles, because Phase 2 split it on the railing. Phase 3 does not merge those cells.
 - A colour split can only cut a rectangle with a straight, wall-to-wall seam. A diagonal material change, or two seams meeting in a T inside one rectangle, is left for a later pass.
+
+### Phase 4: Heuristic scale prior engine
+
+**Deliverables**
+
+- `src/v2_reconstruction/scale.py`: `ScaleEstimator.estimate(flattened, rooms)` returns pixels per centimetre. `result` holds the source (`ocr` or `anchors`), the anchors, and the OCR value when a callout matched a room.
+- `configs/config.yaml`: new `scale:` section. Door, counter, and tub sizes are 80 cm, 60 cm, and 150 cm.
+- `scripts/v2_test_scale.py`: writes `10_scale_anchors.png` and prints every anchor ratio.
+
+**Pipeline**
+
+1. EasyOCR reads the flattened image. A callout such as `13'3" x 13'3"` is kept only when a Phase 3 rectangle has nearly the same aspect (error ≤ 0.25). The scale is that rectangle's pixel size divided by the parsed size, then converted from px/ft to px/cm.
+2. If no callout matches, anchors are measured on the flattened image:
+   - Doorway: a gap in the wall ridges with floor on both sides and wall continuing past both jambs. The gap width is 80 cm.
+   - Countertop: the distance from the wall at which interior edges are densest, between 12 px and 55 px. That depth is 60 cm. The peak has to be clearly above the median and not on the edge of the search window, or it is the wall base and is dropped.
+   - Bathtub: the largest blue-water blob. Its long side is 150 cm.
+3. Each anchor contributes \(S_i = \text{pixels} / \text{centimetres}\). \(S_{\text{final}}\) is the median.
+
+**Results**
+
+| Render | Source | Callouts | Scale | Anchors |
+| --- | --- | --- | --- | --- |
+| heritage towers | anchors | 2, unmatched | 0.425 px/cm | 3 doorways, 1 bathtub |
+| highlandlux citadel | anchors | 0 | 0.419 px/cm | 2 doorways |
+| limestone ranch | anchors | 0 | 0.438 px/cm | 2 doorways, 1 bathtub |
+
+The three plans are all about 600 sq ft and flatten to similar canvases. Their scales land within 0.02 px/cm of each other.
+
+**Insights**
+
+- **The text-box scale from Iteration 1 is not the plan scale.** That 10.683 px/ft figure divides the width of the text glyph by the room size. A real scale needs the room rectangle. Heritage does have two callouts, and neither fitted rectangle has the callout's aspect, so OCR correctly declines and the anchor median is used.
+- **A doorway is an opening through a wall, not every gap in the ridge mask.** The first pass marked 19–28 gaps per plan, including letters, curtains, and the bed. Requiring floor on both sides and wall continuing past both jambs cuts that to two or three openings.
+- **The counter edge is not separable from the wall base on these renders.** Edge density peaks 13–21 px from the wall, only 1.3–1.6× the median, which is the baseboard band. No counter anchor is emitted. The median is carried by doors and tubs.
+- **One bathtub is enough to anchor the median.** Taking every blue blob marked a chair and a balcony object as tubs. Keeping only the largest blue component leaves the real tub on heritage (70 px) and limestone (81 px). Highland's tub is not blue, so it contributes no tub anchor.
+- **The median is stable even when a single opening is furniture.** Heritage still includes a curtain gap and the bed edge. They sit in the same 22–37 px band as the closet opening, so they move the median by a few hundredths of a px/cm rather than by a factor of two.
+
+**Known limitations**
+
+- No YOLO or GroundingDINO weights are in the repo. Anchors are geometric measurements, not detected object boxes. A learned detector would reject the bed and the curtain.
+- Counter depth is implemented and did not fire on these three renders.
+- Highland's scale rests on two openings. One false opening moves the median more there than on heritage, which has four anchors.
+- OCR cannot be checked against a labeled room until a fitted rectangle actually matches a callout's aspect. Phase 5 can draw the implied dimensions and make that mismatch obvious.

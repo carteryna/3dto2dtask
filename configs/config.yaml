@@ -84,3 +84,21 @@ rectilinear:
   seam_delta_e_min: 8.0          # Min LAB distance between the two sides of a split
   grid_snap_tolerance_px: 15
   min_side_px: 12
+
+scale:
+  cm_per_foot: 30.48
+  doorway_cm: 80                 # Interior door width
+  countertop_cm: 60              # Standard counter depth
+  bathtub_cm: 150                # Standard tub length
+  doorway_min_px: 16
+  doorway_max_px: 80             # Wider gaps are missing walls, not doors
+  doorway_thickness_max_px: 22   # A door gap is a slit, not a room
+  doorway_wall_run_px: 18        # Wall must continue this far past both jambs
+  counter_depth_min_px: 12
+  counter_depth_max_px: 55
+  tub_hue_min: 85
+  tub_hue_max: 130
+  tub_sat_min: 35
+  tub_min_area_px: 350
+  tub_max_area_px: 12000
+  tub_min_aspect: 1.25
