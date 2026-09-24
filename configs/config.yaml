@@ -106,3 +106,30 @@ scale:
 blueprint:
   wall_thickness_px: 5
   sqft_per_sqcm: 0.00107639      # 1 / (30.48^2)
+
+# Iteration 3 Phase 1 (src/v3_topology). The original render is not warped.
+v3_segmentation:
+  proposal_conf: 0.10            # Floor regions score well below furniture objectness
+  canvas_lightness_min: 250
+  canvas_chroma_max: 8
+  flat_window_px: 3
+  flat_std_max: 4.0
+  shell_band_px: 15              # Exterior band used to read this render's wall colour
+  wall_ab_tolerance: 6.0
+  wall_lightness_tolerance: 30.0
+  wall_top_open_px: 31           # Ribbons thinner than this are wall tops, not floors
+  max_canvas_fraction: 0.12      # Drop proposals that spill onto the white page
+  max_wall_fraction: 0.18        # Above this, the proposal swallowed wall tops
+  container_wall_max: 0.55       # Still a building wing, not the whole page
+  container_min_area_ratio: 0.08
+  min_floor_area_px: 1500
+  min_area_ratio: 0.012          # Also at least this share of the building footprint
+  min_inradius_px: 12
+  min_inradius_ratio: 0.025      # Times sqrt(footprint area), so it scales with the render
+  object_conf: 0.45              # Furniture objectness; floor proposals sit below this
+  object_fill_min: 0.70          # Used only to absorb a solid blob whose outline sits on a recovered floor
+  nms_coverage: 0.75             # A proposal this covered by a larger one is a duplicate
+  unclaimed_close_px: 15         # Joins floor split by a furniture notch; wall tops are stamped back
+  absorb_contact_min: 0.55       # Outline share that must touch the recovered floor before a blob is dropped
+  interior_erode_px: 35          # Floor must sit inside the building, not on the outer wall band
+  interior_min_fraction: 0.40

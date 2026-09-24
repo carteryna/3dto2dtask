@@ -39,9 +39,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output_dir", default="data/output", help="Directory for result.json and annotated overlays.")
     parser.add_argument(
         "--version",
-        choices=("v1", "v2"),
-        default="v2",
-        help="v1 runs the Iteration 1 exploratory baseline; v2 is the Iteration 2 reconstruction engine.",
+        choices=("v1", "v2", "v3"),
+        default="v3",
+        help="v1 is the exploratory baseline; v2 is the rectilinear reconstruction; v3 is the shared-edge topology engine.",
     )
     parser.add_argument(
         "--method",
@@ -492,12 +492,22 @@ def run_v2(args: argparse.Namespace) -> None:
     print(f"Wrote {result_path}")
 
 
+def run_v3(args: argparse.Namespace) -> None:
+    """Iteration 3 shared-edge reconstruction (not yet implemented)."""
+    raise SystemExit(
+        "Iteration 3 (--version v3) is not implemented yet. "
+        "Run Iteration 2 with --version v2, or the archived baseline with --version v1."
+    )
+
+
 def main() -> None:
     args = parse_args()
     if args.version == "v1":
         run_v1(args)
-    else:
+    elif args.version == "v2":
         run_v2(args)
+    else:
+        run_v3(args)
 
 
 if __name__ == "__main__":
