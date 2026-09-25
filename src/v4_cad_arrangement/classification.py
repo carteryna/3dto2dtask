@@ -114,41 +114,40 @@ class RoomClassifier:
             cats = {o.category for o in objs}
             area_sqft = face.area / (scale_px_per_ft ** 2)
 
-            # Rule 1: Bathroom if contains toilet or bathtub, or contains bathroom seed
-            has_toilet = "toilet" in cats
-            has_tub = "bathtub" in cats
-            has_bath_seed = any(face.contains(Point(sx, sy)) for sx, sy in object_result.bathroom_seeds)
-
-            if has_toilet or has_tub or has_bath_seed:
-                raw_labels.append("BATHROOM")
-                continue
-
-            # Rule 2: Bedroom if contains primary bed object
-            has_bed = "bed" in cats
-            has_bed_seed = any(face.contains(Point(sx, sy)) for sx, sy in object_result.bedroom_seeds)
-            if has_bed and area_sqft >= 60.0:
-                raw_labels.append("BEDROOM")
-                continue
-            if has_bed_seed and area_sqft >= 70.0:
-                raw_labels.append("BEDROOM")
-                continue
-
-            # Rule 3: Balcony if exterior-facing elongated polygon with low area or aspect
             b = face.bounds
             span_w = (b[2] - b[0]) / scale_px_per_ft
             span_h = (b[3] - b[1]) / scale_px_per_ft
             aspect = max(span_w, span_h) / max(min(span_w, span_h), 0.1)
-            # A balcony is usually thin and elongated (< 75 sqft, aspect >= 2.0)
-            if area_sqft <= 75.0 and aspect >= 2.0 and not cats:
+
+            # Rule 1: Bathroom if contains toilet or bathtub, or contains bathroom seed
+            # Note: A real bathroom is compact (typically 30..90 sq ft). If a face swallowed
+            # the entire living area (> 140 sq ft), it cannot be a bathroom even if a fixture leaked.
+            has_toilet = "toilet" in cats
+            has_tub = "bathtub" in cats
+            has_bath_seed = any(face.contains(Point(sx, sy)) for sx, sy in object_result.bathroom_seeds)
+
+            if (has_toilet or has_tub or has_bath_seed) and area_sqft <= 120.0:
+                raw_labels.append("BATHROOM")
+                continue
+
+            # Rule 2: Bedroom if contains primary bed object and reasonable bedroom area (50..220 sq ft)
+            has_bed = "bed" in cats
+            has_bed_seed = any(face.contains(Point(sx, sy)) for sx, sy in object_result.bedroom_seeds)
+            if (has_bed or has_bed_seed) and (55.0 <= area_sqft <= 240.0):
+                raw_labels.append("BEDROOM")
+                continue
+
+            # Rule 3: Balcony if exterior-facing elongated polygon with low area or high aspect
+            if area_sqft <= 75.0 and aspect >= 2.0 and not ({"bed", "sofa", "bathtub", "toilet"} & cats):
                 raw_labels.append("BALCONY")
                 continue
 
-            # Rule 4: Walk-in Closet if small enclosed room (15..55 sqft) without living furniture
+            # Rule 4: Walk-in Closet if small enclosed room (12..55 sqft)
             if 12.0 <= area_sqft <= 55.0 and not ({"sofa", "dining_table"} & cats):
                 raw_labels.append("WALK-IN CLOSET")
                 continue
 
-            # Rule 5: Living / Dining Room if contains sofa, table, or large open floor (> 100 sqft)
+            # Rule 5: Living / Dining Room if contains sofa, dining table, or represents large open area
             if ({"sofa", "dining_table"} & cats) or area_sqft >= 95.0:
                 raw_labels.append("LIVING / DINING")
                 continue
