@@ -201,11 +201,11 @@ flowchart TD
 | :---: | :--- | :--- | :---: |
 | **1** | `calibration.py` | LSD Line Detection, Vanishing Point Estimation, Ground Homography | Done |
 | **2** | `objects.py` | Furniture Layer Decoupling & Plumbing Fixture Detection | Done |
-| **3** | `arrangement.py` | Wall Centerlines & Planar Line Arrangement (Zero-Gap Dual Graph) | In Progress |
-| **4** | `classification.py` | Spatial Containment Join, Semantic Room Labeling, Metric Scaling | Stub |
-| **5** | `visualizer.py` | Vector CAD Blueprint (Hatched Walls, Door Arcs, GeoJSON Export) | Stub |
+| **3** | `arrangement.py` | Wall Centerlines & Planar Line Arrangement (Zero-Gap Dual Graph) | Done |
+| **4** | `classification.py` | Spatial Containment Join, Semantic Room Labeling, Metric Scaling | Done |
+| **5** | `visualizer.py` | Vector CAD Blueprint (Hatched Walls, Door Arcs, GeoJSON Export) | In Progress |
 
-*Execution rule:* Implementation proceeds strictly sequentially. Phase 3 starts only after Phase 2 is approved.
+*Execution rule:* Implementation proceeds strictly sequentially. Phase 5 starts only after Phase 4 is approved.
 
 ---
 
@@ -260,6 +260,69 @@ flowchart TD
 | **`heritage towers`** | Yes (HSV Blue) | Yes (SAM) | 9 | 5 / 5 | $(889.2, 551.0)$ | $(835.8, 352.1)$ |
 | **`highlandlux-citadel`** | Yes (SAM Enamel) | Yes (SAM) | 4 | 4 / 5 | $(519.2, 369.4)$ | $(445.9, 347.8)$ |
 | **`limestone ranch`** | Yes (HSV Blue) | Yes (SAM) | 9 | 6 / 0 | $(888.1, 553.7)$ | $(866.7, 338.4)$ |
+
+---
+
+### Phase 3: Planar Wall-Graph Line Arrangement
+
+**Deliverables**
+- `src/v4_cad_arrangement/arrangement.py`: `PlanarWallArranger.arrange(rectified_image, object_result)` computes rectilinear wall centerlines, snaps collinear/parallel segments, performs dangling end extension, and extracts closed planar room faces via Shapely planar graph polygonization.
+- `configs/config.yaml`: Added `v4_arrangement:` configuration section.
+- `scripts/v4_test_arrangement.py`: Visual QA test script outputting `06_wall_centerlines.png` and `07_planar_faces.png` under `data/output/debug_v4/<stem>/`.
+
+**Pipeline**
+1. **Exterior Envelope Extraction:** Traces the outermost perimeter contour of the building footprint and orthogonalizes it into a closed Manhattan polygon using DP-approximation.
+2. **Manhattan Line Extraction with Furniture Exclusion:** Runs LSD on the rectified grayscale image masked by the inverse furniture mask (`wall_domain`), isolating true structural walls and floor seams without interference from furniture perimeters.
+3. **Axis-Aligned Snapping & Collinear Merging:** Clusters parallel line coordinates within $15\text{ px}$ to a shared Manhattan coordinate and merges collinear segments spanning doorway gaps ($\le 30\text{ px}$).
+4. **Dangling End Extension (Ray Shooting):** Extends dangling wall endpoints by up to $75\text{ px}$ to intersect perpendicular walls or the exterior envelope, forming a closed topological cell complex.
+5. **Planar Line Arrangement & Dual Face Decomposition:** Combines envelope boundaries and extended interior wall centerlines into a single noded planar graph (`unary_union`), extracting minimal closed polygonal cycles (`polygonize`).
+6. **Sliver Rejection:** Discards wall thickness bands ($\min(\text{width}, \text{height}) \le 22\text{ px}$) to yield pure, solid room faces.
+
+**Quantitative Results**
+
+| Render | Raw Lines (H / V) | Snapped Walls (H / V) | Total Faces | Room Polygons | Mutual Overlap Area |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **`heritage towers`** | 81 / 49 | 25 / 19 | 39 | **8** | **0.0000 px²** |
+| **`highlandlux-citadel`** | 40 / 39 | 14 / 20 | 20 | **10** | **0.0000 px²** |
+| **`limestone ranch`** | 56 / 50 | 20 / 19 | 24 | **15** | **0.0000 px²** |
+
+**Key Insights**
+- **Strict Zero-Overlap Guarantee:** Because all faces are extracted as the 2-faces of a single planar line arrangement, every boundary between adjacent rooms is a shared 1-manifold edge. Mutual overlap across all pairs of rooms is strictly **$0.0000\text{ px}^2$**.
+- **No Double-Wall Chasms:** The $15\text{ px}$ coordinate clustering snaps both sides of a wall into a single clean centerline, eliminating the parallel double-wall chasms of earlier iterations.
+- **Continuous Floor Topology:** With furniture decoupled in Phase 2, rooms remain fully solid polygons extending under beds, tables, and sofas.
+
+---
+
+### Phase 4: Spatial Containment & Semantic Room Classification
+
+**Deliverables**
+- `src/v4_cad_arrangement/classification.py`: `RoomClassifier.classify(faces, object_result, filename)` performs spatial containment join between planar room faces and decoupled CAD objects/fixtures, merges adjacent sub-cells sharing the same semantic class, calculates conformal scale in pixels per foot from the filename square footage, and computes nominal room dimensions in architectural feet and inches.
+- `configs/config.yaml`: Added `v4_classification:` configuration parameters.
+- `scripts/v4_test_classification.py`: Visual QA test script outputting `08_semantic_rooms.png` under `data/output/debug_v4/<stem>/`.
+
+**Pipeline**
+1. **Conformal Metric Scaling:** Parses declared square footage from the input filename (e.g., `593 Sq. Ft.`, `623 Sq. Ft.`, `625sq`). Computes global scale:
+   $$S = \sqrt{\frac{\sum \text{Area}(\text{Faces})}{\text{Total Sq Ft}}} \quad (\text{px / ft})$$
+2. **Spatial Containment Join:** Tests intersection between each planar face and the decoupled CAD objects and room centroid seeds from Phase 2.
+3. **Semantic Room Classification Rules:**
+   - **BATHROOM:** Contains a toilet, bathtub, or bathroom seed point.
+   - **BEDROOM:** Contains a bed object or bedroom seed point with area $\ge 60\text{ sq ft}$.
+   - **BALCONY:** Elongated perimeter polygon ($\le 75\text{ sq ft}$, aspect ratio $\ge 2.0$) with no living furniture.
+   - **WALK-IN CLOSET / STORAGE:** Enclosed small footprint ($12..55\text{ sq ft}$) adjacent to bedroom or hallway.
+   - **LIVING / DINING:** Contains sofa, dining table, or represents the open-plan core ($> 95\text{ sq ft}$).
+4. **Adjacent Same-Class Sub-Cell Merging:** Merges planar sub-cells sharing the same label across open passages into unified architectural rooms.
+5. **Architectural Dimension Derivation:** Calculates the bounding extents $(W, L)$ along the Manhattan axes converted to feet and inches:
+   $$W_{\text{ft}} = \frac{\Delta x}{S}, \quad L_{\text{ft}} = \frac{\Delta y}{S} \implies 12'4" \times 10'8"$$
+6. **Polylabel Optimal Label Positioning:** Computes the visual center of each room using the pole of inaccessibility (`shapely.ops.polylabel`).
+
+**Quantitative Results**
+
+| Render | Declared Sq Ft | Derived Scale (px/ft) | Classified Rooms | Room Breakdown (Sq Ft & Dimension) |
+| :--- | :---: | :---: | :---: | :--- |
+| **`heritage towers`** | 593 sq ft | 24.87 px/ft | 5 | **Living / Dining**: 300.5 sq ft (24'5" x 13'11")<br>**Bedroom**: 148.0 sq ft (14'7" x 12'10")<br>**Bathroom**: 45.6 sq ft (10'7" x 5'5")<br>**Walk-in Closet**: 24.0 sq ft (6'0" x 4'9")<br>**Closet / Storage**: 6.1 sq ft (4'10" x 1'3") |
+| **`highlandlux-citadel`** | 623 sq ft | 21.28 px/ft | 6 | **Living / Dining**: 350.5 sq ft (25'8" x 24'4")<br>**Bedroom**: 103.8 sq ft (13'4" x 8'8")<br>**Bathroom**: 58.7 sq ft (10'1" x 9'2")<br>**Balcony**: 65.3 sq ft (19'5" x 3'10")<br>**Walk-in Closet**: 32.2 sq ft (7'5" x 4'4")<br>**Closet / Storage**: 18.2 sq ft (7'5" x 2'6") |
+| **`limestone ranch`** | 625 sq ft | 23.95 px/ft | 6 | **Living / Dining**: 288.7 sq ft (24'11" x 21'9")<br>**Bedroom**: 169.2 sq ft (14'8" x 14'3")<br>**Bathroom**: 70.2 sq ft (10'8" x 7'11")<br>**Balcony**: 48.6 sq ft (16'3" x 3'8")<br>**Walk-in Closet**: 29.8 sq ft (6'11" x 5'9")<br>**Closet / Storage**: 20.4 sq ft (10'9" x 3'0") |
+
 
 **Key Insights**
 - **Vanishing points match image principal axes:** The estimated vertical vanishing points in `heritage towers` ($x = 569.9$) and `limestone ranch` ($x = 565.8$) align almost perfectly with the horizontal center of the $1140\text{ px}$ image ($c_x = 570.0$). This confirms the virtual rendering camera has zero roll.

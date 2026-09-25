@@ -181,3 +181,22 @@ v4_objects:
   toilet_min_area_px: 250
   toilet_max_area_px: 1800
 
+# Iteration 4 Phase 3 (src/v4_cad_arrangement/arrangement.py)
+v4_arrangement:
+  min_wall_length_px: 35.0      # Minimum length for raw wall line candidate
+  snap_tolerance_px: 15.0       # Max distance to snap parallel walls onto a shared axis
+  gap_bridge_px: 30.0           # Max collinear gap bridged along the same wall coordinate
+  min_wall_run_px: 45.0         # Minimum merged wall segment length to keep
+  extension_tolerance_px: 75.0  # Max distance to extend dangling ends to perpendicular walls or envelope
+  min_room_area_px: 3500.0      # Discard slivers smaller than this area
+  min_room_dimension_px: 22.0   # Discard wall thickness slivers narrower than this
+  envelope_epsilon_ratio: 0.008 # Contour approximation epsilon ratio for exterior envelope
+
+# Iteration 4 Phase 4 (src/v4_cad_arrangement/classification.py)
+v4_classification:
+  min_closet_area_sqft: 15.0    # Min area to qualify as walk-in closet
+  max_closet_area_sqft: 45.0    # Max area to qualify as walk-in closet
+  min_balcony_aspect: 1.8       # Minimum aspect ratio for elongated balcony
+  fallback_scale_px_per_ft: 20.0
+
+
