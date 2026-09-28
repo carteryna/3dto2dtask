@@ -6,6 +6,7 @@ services:
     container_name: cv_floorplan_container
     volumes:
       - ./inout_data:/app/inout_data
+      - ./human_semantic_guide:/app/human_semantic_guide
       - ./data/output:/app/data/output
       - ./configs:/app/configs
       - ./src:/app/src

@@ -199,4 +199,14 @@ v4_classification:
   min_balcony_aspect: 1.8       # Minimum aspect ratio for elongated balcony
   fallback_scale_px_per_ft: 20.0
 
+# Iteration 5 Semi-Automated CAD Vectorization (src/v5_semi_automated/)
+v5_rectification:
+  min_line_length_px: 25.0
+  vert_angle_tolerance_deg: 20.0
+  max_orthographic_vy: 50000.0
+  border_value: [255, 255, 255]
+  guide_dir: "human_semantic_guide"
+  output_dir: "data/output/debug_v5"
+
+
 
