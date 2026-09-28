@@ -12,11 +12,29 @@ from src.v5_semi_automated.topology import (
     TopologicalRoomNode,
     TopologyResult,
 )
+from src.v5_semi_automated.geometry import (
+    GeometryResult,
+    RegularizedRoomNode,
+    SemiAutomatedGeometry,
+)
+from src.v5_semi_automated.scale import (
+    DimensionedRoom,
+    FixtureScaleAnchor,
+    ScaleResult,
+    SemiAutomatedScale,
+)
 
 __all__ = [
+    "DimensionedRoom",
+    "FixtureScaleAnchor",
+    "GeometryResult",
     "RectificationResult",
+    "RegularizedRoomNode",
+    "ScaleResult",
     "SemanticGuide",
+    "SemiAutomatedGeometry",
     "SemiAutomatedRectifier",
+    "SemiAutomatedScale",
     "SemiAutomatedTopology",
     "TopologicalRoomNode",
     "TopologyResult",

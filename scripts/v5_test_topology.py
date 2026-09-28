@@ -140,8 +140,9 @@ def main():
         rect_cl_path = unit_out_dir / "03_rectified_center_line.png"
         rect_ns_path = unit_out_dir / "03_rectified_no_stroke.png"
         rect_st_path = unit_out_dir / "03_rectified_stroke.png"
+        rect_fn_path = unit_out_dir / "03_rectified_furniture.png"
 
-        if rect_render_path.is_file() and (rect_cl_path.is_file() or rect_ns_path.is_file()):
+        if rect_render_path.is_file() and (rect_cl_path.is_file() or rect_ns_path.is_file() or rect_fn_path.is_file()):
             rect_render = cv2.imread(str(rect_render_path))
             rect_guides = {}
             if rect_cl_path.is_file():
@@ -150,6 +151,8 @@ def main():
                 rect_guides["no_stroke"] = cv2.imread(str(rect_ns_path), cv2.IMREAD_UNCHANGED)
             if rect_st_path.is_file():
                 rect_guides["stroke"] = cv2.imread(str(rect_st_path), cv2.IMREAD_UNCHANGED)
+            if rect_fn_path.is_file():
+                rect_guides["furniture"] = cv2.imread(str(rect_fn_path), cv2.IMREAD_UNCHANGED)
         else:
             guides = rectifier.load_guides_for_unit(path)
             rect_res = rectifier.rectify(render_img, guides=guides, unit_key=unit_key)
@@ -202,6 +205,31 @@ def main():
             cv2.circle(seeds_vis, (cx, cy), 8, (255, 255, 255), 2, cv2.LINE_AA)
             cv2.putText(seeds_vis, f"R{room.room_id}", (cx + 10, cy + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 220), 1, cv2.LINE_AA)
         cv2.imwrite(str(unit_out_dir / "09_room_seeds_centroids.png"), seeds_vis)
+
+        # 5. Save Semantic Fixtures Overlay (Bed: Pink, Countertop: Yellow, Toilet: Green, Balcony: Blue)
+        if topo_res.furniture_layers:
+            vis_fixtures = rect_render.copy()
+            # Overlay colors (BGR)
+            colors = {
+                "bed": (203, 100, 255),       # Pink / Magenta
+                "countertop": (0, 230, 255),   # Yellow
+                "toilet": (0, 255, 120),       # Vibrant Green
+                "balcony": (255, 150, 0),      # Electric Blue
+            }
+            fix_color_layer = np.zeros_like(rect_render)
+            for k, col in colors.items():
+                m = topo_res.furniture_layers.get(k)
+                if m is not None and np.sum(m > 0) > 0:
+                    fix_color_layer[m > 0] = col
+            # Alpha blend
+            mask_any = np.any(fix_color_layer > 0, axis=-1)
+            vis_fixtures[mask_any] = cv2.addWeighted(vis_fixtures, 0.4, fix_color_layer, 0.6, 0)[mask_any]
+            for itm in topo_res.furniture_items:
+                fcx, fcy = int(round(itm["centroid"][0])), int(round(itm["centroid"][1]))
+                flbl = itm["fixture_type"][:4].upper()
+                cv2.putText(vis_fixtures, flbl, (fcx - 12, fcy + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (20, 20, 20), 2, cv2.LINE_AA)
+                cv2.putText(vis_fixtures, flbl, (fcx - 12, fcy + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.imwrite(str(unit_out_dir / "09b_topological_fixtures_overlay.png"), vis_fixtures)
 
         results_summary.append({
             "unit": stem,

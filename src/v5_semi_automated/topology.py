@@ -29,6 +29,8 @@ class TopologicalRoomNode:
     centroid: Tuple[float, float]
     bbox: Tuple[int, int, int, int]  # (x, y, w, h)
     area_px: float
+    fixtures: List[str] = field(default_factory=list)
+    is_outdoor: bool = False
 
 
 @dataclass
@@ -39,6 +41,8 @@ class TopologyResult:
     centerline_mask: np.ndarray  # Binary mask uint8 of 1D wall axes
     exterior_envelope_mask: np.ndarray  # Binary mask uint8 of unit footprint
     rooms: List[TopologicalRoomNode] = field(default_factory=list)
+    furniture_layers: Dict[str, np.ndarray] = field(default_factory=dict)
+    furniture_items: List[Dict] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
 
 
@@ -57,44 +61,92 @@ class SemiAutomatedTopology:
         self.red_min_thresh = int(self.params.get("red_min_thresh", 150))
 
     def extract_wall_mask(self, rectified_guides: Dict[str, np.ndarray]) -> np.ndarray:
-        """Extract solid wall mask from no_stroke or stroke guides."""
+        """Extract solid wall mask from no_stroke, stroke, or furniture guides."""
+        base_wall: Optional[np.ndarray] = None
+
         # Prefer no_stroke
         if "no_stroke" in rectified_guides:
             guide = rectified_guides["no_stroke"]
             if guide.shape[2] >= 4:
-                return (guide[:, :, 3] > self.wall_alpha_thresh).astype(np.uint8) * 255
-            gray = cv2.cvtColor(guide[:, :, :3], cv2.COLOR_BGR2GRAY)
-            return (gray > 0).astype(np.uint8) * 255
+                base_wall = (guide[:, :, 3] > self.wall_alpha_thresh).astype(np.uint8) * 255
+            else:
+                gray = cv2.cvtColor(guide[:, :, :3], cv2.COLOR_BGR2GRAY)
+                base_wall = (gray > 0).astype(np.uint8) * 255
 
         # Secondary: stroke guide
-        if "stroke" in rectified_guides:
+        elif "stroke" in rectified_guides:
             guide = rectified_guides["stroke"]
             if guide.shape[2] >= 4:
-                return (guide[:, :, 3] > self.wall_alpha_thresh).astype(np.uint8) * 255
+                base_wall = (guide[:, :, 3] > self.wall_alpha_thresh).astype(np.uint8) * 255
+
+        # Tertiary: wall body from furniture guide
+        elif "furniture" in rectified_guides:
+            guide = rectified_guides["furniture"]
+            if guide.shape[2] >= 4:
+                base_wall = (guide[:, :, 3] > self.wall_alpha_thresh).astype(np.uint8) * 255
 
         # Fallback if only centerline exists
-        if "center_line" in rectified_guides:
+        elif "center_line" in rectified_guides:
             guide = rectified_guides["center_line"]
             if guide.shape[2] >= 4:
                 b, g, r, a = cv2.split(guide)
                 is_red = ((r.astype(int) - g.astype(int) > self.red_diff_thresh) & (r > self.red_min_thresh) & (a > self.wall_alpha_thresh)).astype(np.uint8) * 255
                 kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
-                return cv2.dilate(is_red, kernel)
+                base_wall = cv2.dilate(is_red, kernel)
 
-        raise ValueError("No valid guide format available to extract wall mask.")
+        if base_wall is None:
+            raise ValueError("No valid guide format available to extract wall mask.")
+
+        # Integrate blue balcony railing from furniture guide to close outdoor cycles
+        if "furniture" in rectified_guides:
+            furn = rectified_guides["furniture"]
+            if furn.shape[2] >= 4:
+                b, g, r, a = cv2.split(furn)
+                valid = a > self.wall_alpha_thresh
+                hsv = cv2.cvtColor(furn[:, :, :3], cv2.COLOR_BGR2HSV)
+                H, S, V = cv2.split(hsv)
+                blue_mask = (valid & (S > 50) & (V > 50) & (H >= 95) & (H <= 130)).astype(np.uint8) * 255
+                if np.sum(blue_mask > 0) > 100:
+                    k_close = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+                    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, k_close)
+                    k_balcony = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+                    blue_rail = cv2.dilate(blue_mask, k_balcony)
+                    base_wall = cv2.bitwise_or(base_wall, blue_rail)
+
+        return base_wall
 
     def extract_raw_centerline(self, rectified_guides: Dict[str, np.ndarray], wall_mask: np.ndarray) -> np.ndarray:
-        """Extract raw 1D wall centerline from center_line guide or skeletonize wall mask."""
-        if "center_line" in rectified_guides:
-            guide = rectified_guides["center_line"]
-            if guide.shape[2] >= 4:
-                b, g, r, a = cv2.split(guide)
-                is_red = ((r.astype(int) - g.astype(int) > self.red_diff_thresh) & (r > self.red_min_thresh) & (a > self.wall_alpha_thresh)).astype(np.uint8) * 255
-                if np.sum(is_red > 0) > 100:
-                    return is_red
+        """Extract raw 1D wall centerline from center_line guide, furniture guide, or skeletonize wall mask."""
+        raw_centerline: Optional[np.ndarray] = None
+        for key in ("center_line", "furniture"):
+            if key in rectified_guides:
+                guide = rectified_guides[key]
+                if guide.shape[2] >= 4:
+                    b, g, r, a = cv2.split(guide)
+                    is_red = ((r.astype(int) - g.astype(int) > self.red_diff_thresh) & (r > self.red_min_thresh) & (a > self.wall_alpha_thresh)).astype(np.uint8) * 255
+                    if np.sum(is_red > 0) > 100:
+                        raw_centerline = is_red
+                        break
 
-        # Fallback: compute morphological skeleton of wall_mask
-        return self._morphological_skeleton(wall_mask)
+        if raw_centerline is None:
+            raw_centerline = self._morphological_skeleton(wall_mask)
+
+        # Include thin skeleton of blue balcony boundary line
+        if "furniture" in rectified_guides:
+            furn = rectified_guides["furniture"]
+            if furn.shape[2] >= 4:
+                b, g, r, a = cv2.split(furn)
+                valid = a > self.wall_alpha_thresh
+                hsv = cv2.cvtColor(furn[:, :, :3], cv2.COLOR_BGR2HSV)
+                H, S, V = cv2.split(hsv)
+                blue_mask = (valid & (S > 50) & (V > 50) & (H >= 95) & (H <= 130)).astype(np.uint8) * 255
+                if np.sum(blue_mask > 0) > 100:
+                    k_close = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+                    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, k_close)
+                    blue_skel = self._morphological_skeleton(blue_mask)
+                    raw_centerline = cv2.bitwise_or(raw_centerline, blue_skel)
+
+        return raw_centerline
 
     def _morphological_skeleton(self, mask: np.ndarray) -> np.ndarray:
         """Standard morphological skeleton extraction."""
@@ -139,6 +191,81 @@ class SemiAutomatedTopology:
 
         return bridged_centerline
 
+    def extract_furniture_layers(
+        self,
+        rectified_guides: Dict[str, np.ndarray],
+    ) -> Tuple[Dict[str, np.ndarray], List[Dict]]:
+        """Extract masks and metadata for bed (pink), countertop (yellow), toilet (green), and balcony (blue)."""
+        layers = {
+            "bed": np.zeros((1, 1), dtype=np.uint8),
+            "countertop": np.zeros((1, 1), dtype=np.uint8),
+            "toilet": np.zeros((1, 1), dtype=np.uint8),
+            "balcony": np.zeros((1, 1), dtype=np.uint8),
+        }
+        items: List[Dict] = []
+        if "furniture" not in rectified_guides:
+            return layers, items
+
+        furn = rectified_guides["furniture"]
+        h, w = furn.shape[:2]
+        for k in layers:
+            layers[k] = np.zeros((h, w), dtype=np.uint8)
+
+        if furn.shape[2] < 4:
+            return layers, items
+
+        b, g, r, a = cv2.split(furn)
+        valid = a > self.wall_alpha_thresh
+        hsv = cv2.cvtColor(furn[:, :, :3], cv2.COLOR_BGR2HSV)
+        H, S, V = cv2.split(hsv)
+        sat = valid & (S > 50) & (V > 50)
+
+        # Discrete color classifications:
+        # Pink (Bed): H in [135, 175]
+        pink_mask = (sat & (H >= 135) & (H <= 175)).astype(np.uint8) * 255
+        # Yellow (Countertop): H in [20, 38]
+        yellow_mask = (sat & (H >= 20) & (H <= 38)).astype(np.uint8) * 255
+        # Green (Toilet): H in [40, 85]
+        green_mask = (sat & (H >= 40) & (H <= 85)).astype(np.uint8) * 255
+        # Blue (Balcony): H in [95, 130]
+        blue_mask = (sat & (H >= 95) & (H <= 130)).astype(np.uint8) * 255
+        if np.sum(blue_mask > 0) > 100:
+            k_close = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+            blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, k_close)
+
+        layers["bed"] = pink_mask
+        layers["countertop"] = yellow_mask
+        layers["toilet"] = green_mask
+        layers["balcony"] = blue_mask
+
+        # Detect discrete items for each category
+        type_specs = [
+            ("bed", pink_mask, 500.0),
+            ("countertop", yellow_mask, 300.0),
+            ("toilet", green_mask, 100.0),
+            ("balcony", blue_mask, 300.0),
+        ]
+        for fixture_type, mask, min_area in type_specs:
+            cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            for c in cnts:
+                area = float(cv2.contourArea(c))
+                if area >= min_area:
+                    bx, by, bw, bh = cv2.boundingRect(c)
+                    M = cv2.moments(c)
+                    cx = float(M["m10"] / M["m00"]) if M["m00"] > 0 else float(bx + bw / 2.0)
+                    cy = float(M["m01"] / M["m00"]) if M["m00"] > 0 else float(by + bh / 2.0)
+                    rect = cv2.minAreaRect(c)
+                    items.append({
+                        "fixture_type": fixture_type,
+                        "area_px": area,
+                        "centroid": (cx, cy),
+                        "bbox": (int(bx), int(by), int(bw), int(bh)),
+                        "min_area_rect": ((float(rect[0][0]), float(rect[0][1])), (float(rect[1][0]), float(rect[1][1])), float(rect[2])),
+                        "contour": c,
+                    })
+
+        return layers, items
+
     def extract_exterior_envelope(self, wall_mask: np.ndarray) -> np.ndarray:
         """Extract solid exterior footprint envelope of the entire apartment."""
         contours, _ = cv2.findContours(wall_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -153,6 +280,8 @@ class SemiAutomatedTopology:
         wall_mask: np.ndarray,
         envelope_mask: np.ndarray,
         human_labels: Optional[Dict | List] = None,
+        furniture_items: Optional[List[Dict]] = None,
+        balcony_mask: Optional[np.ndarray] = None,
     ) -> List[TopologicalRoomNode]:
         """Extract closed room cycles from the interior footprint."""
         interior = cv2.bitwise_and(envelope_mask, cv2.bitwise_not(wall_mask))
@@ -187,6 +316,26 @@ class SemiAutomatedTopology:
             # Assign human label if provided, else neutral Room ID (zero heuristic hallucination)
             label = self._resolve_room_label(room_id, mask_i, (cx, cy), human_labels)
 
+            # Check which furniture/fixtures lie inside this room
+            rm_fixtures: List[str] = []
+            if furniture_items:
+                h_m, w_m = mask_i.shape[:2]
+                for item in furniture_items:
+                    fcx, fcy = item["centroid"]
+                    px, py = int(round(fcx)), int(round(fcy))
+                    if 0 <= px < w_m and 0 <= py < h_m and mask_i[py, px] > 0:
+                        rm_fixtures.append(item["fixture_type"])
+
+            # Detect if outdoor (balcony / terrace / patio)
+            is_outdoor = False
+            if balcony_mask is not None and np.sum(balcony_mask > 0) > 0:
+                # Check overlap or adjacency with dilated balcony line
+                k_adj = cv2.getStructuringElement(cv2.MORPH_RECT, (11, 11))
+                balc_dil = cv2.dilate(balcony_mask, k_adj)
+                overlap = cv2.bitwise_and(mask_i, balc_dil)
+                if np.sum(overlap > 0) > 200 and "bed" not in rm_fixtures and "toilet" not in rm_fixtures:
+                    is_outdoor = True
+
             rooms.append(
                 TopologicalRoomNode(
                     room_id=room_id,
@@ -196,6 +345,8 @@ class SemiAutomatedTopology:
                     centroid=(cx, cy),
                     bbox=bbox,
                     area_px=area,
+                    fixtures=rm_fixtures,
+                    is_outdoor=is_outdoor,
                 )
             )
 
@@ -280,6 +431,11 @@ class SemiAutomatedTopology:
         else:
             notes.append("No human labels provided; defaulting to neutral Room IDs (Room 1, Room 2, ...).")
 
+        # 0. Furniture Layers Extraction
+        furniture_layers, furniture_items = self.extract_furniture_layers(rectified_guides)
+        if furniture_items:
+            notes.append(f"Extracted {len(furniture_items)} semantic fixture items (bed, countertop, toilet, balcony).")
+
         # 1. Wall Mask Extraction
         wall_mask = self.extract_wall_mask(rectified_guides)
         notes.append(f"Extracted solid wall mask ({np.sum(wall_mask > 0)} wall pixels).")
@@ -298,7 +454,13 @@ class SemiAutomatedTopology:
         notes.append(f"Extracted building envelope ({np.sum(envelope_mask > 0)} total footprint pixels).")
 
         # 5. Extract Closed Room Cycles
-        rooms = self.extract_rooms(wall_mask, envelope_mask, human_labels=human_labels)
+        rooms = self.extract_rooms(
+            wall_mask,
+            envelope_mask,
+            human_labels=human_labels,
+            furniture_items=furniture_items,
+            balcony_mask=furniture_layers.get("balcony"),
+        )
         notes.append(f"Identified {len(rooms)} closed topological room cycles.")
 
         return TopologyResult(
@@ -307,5 +469,7 @@ class SemiAutomatedTopology:
             centerline_mask=bridged_centerline,
             exterior_envelope_mask=envelope_mask,
             rooms=rooms,
+            furniture_layers=furniture_layers,
+            furniture_items=furniture_items,
             notes=notes,
         )

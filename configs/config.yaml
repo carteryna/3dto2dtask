@@ -215,6 +215,28 @@ v5_topology:
   red_diff_thresh: 50
   red_min_thresh: 150
 
+v5_geometry:
+  approx_epsilon_px: 4.0
+  min_segment_px: 12.0
+  coord_snap_px: 12.0
+  min_polygon_area_px: 600.0
+  max_ortho_dev_deg: 0.5
+
+v5_scale:
+  cm_per_foot: 30.48
+  standard_countertop_depth_cm: 60.0
+  standard_toilet_width_cm: 40.0
+  standard_toilet_length_cm: 70.0
+  standard_queen_bed_width_cm: 152.4
+  standard_queen_bed_length_cm: 203.2
+  standard_queen_bed_area_sqft: 33.33
+  standard_toilet_area_sqft: 3.01
+  max_area_error_ratio: 0.03
+  fallback_scale_px_per_ft: 22.0
+  output_dir: "data/output/debug_v5"
+
+
+
 
 
 

@@ -31,9 +31,11 @@ def classify_guide_format(stem: str) -> str:
     """Classify human semantic guide format from filename suffix.
 
     Returns:
-        'center_line' | 'no_stroke' | 'stroke' | 'unknown'
+        'furniture' | 'center_line' | 'no_stroke' | 'stroke' | 'unknown'
     """
     s = stem.lower()
+    if "furniture" in s:
+        return "furniture"
     if "center_line" in s or "central_line" in s:
         return "center_line"
     if "no_stroke" in s:
@@ -48,7 +50,7 @@ class SemanticGuide:
     """Container for a human semantic guide asset."""
     unit_key: str
     stem: str
-    format_type: str  # 'center_line' | 'no_stroke' | 'stroke'
+    format_type: str  # 'furniture' | 'center_line' | 'no_stroke' | 'stroke'
     path: Path
     image: np.ndarray  # 4-channel BGRA uint8
 
@@ -133,15 +135,16 @@ class SemiAutomatedRectifier:
         notes: List[str] = []
 
         # 1. Prefer red centerline if available (pure 1D wall axes)
-        if "center_line" in guides:
-            red_mask = self.extract_red_centerline_mask(guides["center_line"].image)
-            lines, _, _, _ = self.lsd.detect(red_mask)
-            if lines is not None and len(lines) > 0:
-                lines = lines.reshape(-1, 4)
-                v_lines = self._filter_vertical_lines(lines)
-                if len(v_lines) >= 4:
-                    notes.append(f"Extracted {len(v_lines)} vertical segments from red center-line guide.")
-                    return v_lines, notes
+        for cl_key in ("center_line", "furniture"):
+            if cl_key in guides:
+                red_mask = self.extract_red_centerline_mask(guides[cl_key].image)
+                lines, _, _, _ = self.lsd.detect(red_mask)
+                if lines is not None and len(lines) > 0:
+                    lines = lines.reshape(-1, 4)
+                    v_lines = self._filter_vertical_lines(lines)
+                    if len(v_lines) >= 4:
+                        notes.append(f"Extracted {len(v_lines)} vertical segments from {cl_key} guide.")
+                        return v_lines, notes
 
         # 2. Next prefer solid wall body or stroke alpha boundary
         for fmt in ("no_stroke", "stroke"):
