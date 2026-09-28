@@ -15,7 +15,7 @@ This project delivers a robust, measurement-ready 2D CAD reconstruction engine. 
 
 | Raw 3D Perspective Marketing Render | Synthesized 2D Architectural CAD Blueprint |
 | :---: | :---: |
-| ![Raw 3D Marketing Render](data/output/debug_v5/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./02_rectified_render.png) | ![Final Publication Blueprint](data/output/blueprint_v5_heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft..png) |
+| ![Raw 3D Marketing Render](docs/images/heritage_02_rectified_render.png) | ![Final Publication Blueprint](docs/images/blueprint_v5_heritage_towers.png) |
 | *Perspective camera tilt, occluded floor seams, 3D furniture clutter* | *True 2D orthographic plan, standard walls, metric scale, zero gaps* |
 
 ---
@@ -54,11 +54,11 @@ The production-grade **Iteration 5** pipeline utilizes a pragmatic **Human-in-th
 | Phase | Description | Visual Artifact |
 | :---: | :--- | :---: |
 | **Input** | **Lightweight Human Semantic Guide:** Red wall centerlines, pink beds, yellow countertops, green toilets, and blue balconies drawn in $<60\text{s}$ to abstract away 3D extrusions and furniture clutter. | ![Human Semantic Guide](human_semantic_guide/heritage_towers_a1_1_Bed_1_Bath_593_Sq_Ft_semantic_furniture.png) |
-| **Phase 1** | **Homography Rectification (`rectification.py`):** Estimates camera pitch from vertical wall vanishing points and warps the render and guide onto a plumb orthographic ground plane. | ![Rectification Overlay](data/output/debug_v5/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./04_rectified_composite_overlay.png) |
-| **Phase 2** | **Topological Room Extraction (`topology.py`):** Axial morphological closing bridges doorway openings while wall masks prevent bleeding across rooms, extracting closed room cycles with zero overlap. | ![Topological Rooms](data/output/debug_v5/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./08_topological_rooms_overlay.png) |
-| **Phase 3** | **Manhattan Regularization (`geometry.py`):** Douglas-Peucker simplification, direction-aware $0^\circ/90^\circ$ snapping, and wall thickness normalization ($\ge 10\text{ px} \approx 6\text{ in}$). Enforces $0.0000\text{ px}^2$ gaps and overlaps. | ![Manhattan Shared Wireframe](data/output/debug_v5/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./11_manhattan_shared_wall_wireframe.png) |
-| **Phase 4** | **Conformal Metric Scaling (`scale.py`):** Computes master scale $S = \sqrt{A_{\text{px}} / A_{\text{target}}}$ with multi-fixture cross-validation (beds, counters, toilets); derives length $\times$ width room spans. | ![Scale Verification](data/output/debug_v5/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./14_fixture_dimension_verification.png) |
-| **Phase 5** | **Architectural CAD Synthesis (`visualizer.py` & `export.py`):** Renders high-resolution blueprints with top header banner, compact badges, layered SVGs, and RFC 7946 GeoJSON. | ![Publication Blueprint](data/output/blueprint_v5_heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft..png) |
+| **Phase 1** | **Homography Rectification (`rectification.py`):** Estimates camera pitch from vertical wall vanishing points and warps the render and guide onto a plumb orthographic ground plane. | ![Rectification Overlay](docs/images/heritage_04_rectified_composite.png) |
+| **Phase 2** | **Topological Room Extraction (`topology.py`):** Axial morphological closing bridges doorway openings while wall masks prevent bleeding across rooms, extracting closed room cycles with zero overlap. | ![Topological Rooms](docs/images/heritage_08_topological_rooms.png) |
+| **Phase 3** | **Manhattan Regularization (`geometry.py`):** Douglas-Peucker simplification, direction-aware $0^\circ/90^\circ$ snapping, and wall thickness normalization ($\ge 10\text{ px} \approx 6\text{ in}$). Enforces $0.0000\text{ px}^2$ gaps and overlaps. | ![Manhattan Shared Wireframe](docs/images/heritage_11_manhattan_wireframe.png) |
+| **Phase 4** | **Conformal Metric Scaling (`scale.py`):** Computes master scale $S = \sqrt{A_{\text{px}} / A_{\text{target}}}$ with multi-fixture cross-validation (beds, counters, toilets); derives length $\times$ width room spans. | ![Scale Verification](docs/images/heritage_14_fixture_dimensions.png) |
+| **Phase 5** | **Architectural CAD Synthesis (`visualizer.py` & `export.py`):** Renders high-resolution blueprints with top header banner, compact badges, layered SVGs, and RFC 7946 GeoJSON. | ![Publication Blueprint](docs/images/blueprint_v5_heritage_towers.png) |
 
 ---
 
@@ -133,14 +133,14 @@ The Iteration 5 pipeline was verified across all three representative test asset
 The pipeline outputs publication-ready, measurement-accurate 2D blueprints with top architectural header banners that guarantee 0% occlusion of floor plan geometries:
 
 #### 1. Heritage Towers — A1 (1 Bed 1 Bath, 593 Sq. Ft.)
-![Heritage Towers A1 Final Blueprint](data/output/blueprint_v5_heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft..png)
+![Heritage Towers A1 Final Blueprint](docs/images/blueprint_v5_heritage_towers.png)
 
 * **Gross Footprint:** $744.9\text{ sq ft}$ ($69.2\text{ m}^2$) | **Solid Walls:** $151.9\text{ sq ft}$ ($20.4\%$)
 * **Net Rooms:** $593.0\text{ sq ft}$ ($541.6\text{ sq ft}$ interior conditioned $+ 51.4\text{ sq ft}$ private balcony)
 * **Master Conformal Scale:** $1\text{ ft} = 23.08\text{ px}$ ($1.32\text{ cm/px}$)
 
 #### 2. Highlandlux — Citadel (1 Bed 1 Bath, 623 Sq. Ft.)
-![Highlandlux Citadel Final Blueprint](data/output/blueprint_v5_highlandlux-citadel-1%20Bed%201%20Bath%20623%20Sq.%20Ft..png)
+![Highlandlux Citadel Final Blueprint](docs/images/blueprint_v5_highlandlux_citadel.png)
 
 * **Gross Footprint:** $752.9\text{ sq ft}$ ($70.0\text{ m}^2$) | **Solid Walls:** $129.9\text{ sq ft}$ ($17.3\%$)
 * **Net Rooms:** $623.0\text{ sq ft}$ ($560.1\text{ sq ft}$ interior conditioned $+ 62.9\text{ sq ft}$ private balcony)
@@ -148,7 +148,7 @@ The pipeline outputs publication-ready, measurement-accurate 2D blueprints with 
 * **Unobstructed View:** Room 3 (outdoor balcony) and Room 7 are 100% visible and unblocked.
 
 #### 3. Limestone Ranch — Santa Fe (625 Sq. Ft.)
-![Limestone Ranch Santa Fe Final Blueprint](data/output/blueprint_v5_limestone%20ranch_santa%20fe_625sq.png)
+![Limestone Ranch Santa Fe Final Blueprint](docs/images/blueprint_v5_limestone_ranch.png)
 
 * **Gross Footprint:** $781.8\text{ sq ft}$ ($72.6\text{ m}^2$) | **Solid Walls:** $156.8\text{ sq ft}$ ($20.1\%$)
 * **Net Rooms:** $625.0\text{ sq ft}$ ($591.7\text{ sq ft}$ interior conditioned $+ 33.3\text{ sq ft}$ private balcony)

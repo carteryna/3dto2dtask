@@ -1,0 +1,736 @@
+{
+  "type": "FeatureCollection",
+  "name": "heritage_towers_architectural_cad_floorplan",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84 (feet)"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "footprint",
+      "properties": {
+        "feature_type": "building_envelope",
+        "unit_key": "heritage_towers",
+        "gross_area_sqft": 744.91,
+        "target_sqft": 593.0,
+        "units": "feet"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              25.868,
+              6.196
+            ],
+            [
+              42.984,
+              6.196
+            ],
+            [
+              42.984,
+              32.628
+            ],
+            [
+              28.663,
+              32.628
+            ],
+            [
+              28.663,
+              31.805
+            ],
+            [
+              23.507,
+              31.805
+            ],
+            [
+              23.507,
+              32.65
+            ],
+            [
+              14.017,
+              32.65
+            ],
+            [
+              14.017,
+              7.605
+            ],
+            [
+              25.868,
+              7.605
+            ],
+            [
+              25.868,
+              6.196
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "wall_1",
+      "properties": {
+        "feature_type": "wall",
+        "wall_type": "structural_partition",
+        "area_sqft": 151.91,
+        "units": "feet"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              25.868,
+              7.605
+            ],
+            [
+              25.868,
+              6.196
+            ],
+            [
+              42.984,
+              6.196
+            ],
+            [
+              42.984,
+              32.628
+            ],
+            [
+              28.663,
+              32.628
+            ],
+            [
+              28.663,
+              31.805
+            ],
+            [
+              23.507,
+              31.805
+            ],
+            [
+              23.507,
+              32.65
+            ],
+            [
+              14.017,
+              32.65
+            ],
+            [
+              14.017,
+              7.605
+            ],
+            [
+              25.868,
+              7.605
+            ]
+          ],
+          [
+            [
+              29.811,
+              7.02
+            ],
+            [
+              29.811,
+              11.223
+            ],
+            [
+              42.031,
+              11.223
+            ],
+            [
+              42.031,
+              7.02
+            ],
+            [
+              29.811,
+              7.02
+            ]
+          ],
+          [
+            [
+              42.031,
+              21.622
+            ],
+            [
+              42.031,
+              12.133
+            ],
+            [
+              29.552,
+              12.133
+            ],
+            [
+              29.552,
+              21.622
+            ],
+            [
+              42.031,
+              21.622
+            ]
+          ],
+          [
+            [
+              36.398,
+              31.805
+            ],
+            [
+              42.031,
+              31.805
+            ],
+            [
+              42.031,
+              22.315
+            ],
+            [
+              36.398,
+              22.315
+            ],
+            [
+              36.398,
+              31.805
+            ]
+          ],
+          [
+            [
+              33.061,
+              26.085
+            ],
+            [
+              29.552,
+              26.085
+            ],
+            [
+              29.552,
+              31.805
+            ],
+            [
+              35.704,
+              31.805
+            ],
+            [
+              35.704,
+              22.315
+            ],
+            [
+              33.061,
+              22.315
+            ],
+            [
+              33.061,
+              26.085
+            ]
+          ],
+          [
+            [
+              32.498,
+              25.522
+            ],
+            [
+              32.498,
+              22.315
+            ],
+            [
+              29.552,
+              22.315
+            ],
+            [
+              29.552,
+              25.522
+            ],
+            [
+              32.498,
+              25.522
+            ]
+          ],
+          [
+            [
+              26.735,
+              8.406
+            ],
+            [
+              14.949,
+              8.406
+            ],
+            [
+              14.949,
+              20.452
+            ],
+            [
+              18.979,
+              20.452
+            ],
+            [
+              18.979,
+              24.179
+            ],
+            [
+              14.949,
+              24.179
+            ],
+            [
+              14.949,
+              31.155
+            ],
+            [
+              19.412,
+              31.155
+            ],
+            [
+              19.412,
+              31.805
+            ],
+            [
+              22.662,
+              31.805
+            ],
+            [
+              22.662,
+              29.248
+            ],
+            [
+              23.269,
+              29.248
+            ],
+            [
+              23.269,
+              31.155
+            ],
+            [
+              28.902,
+              31.155
+            ],
+            [
+              28.902,
+              7.02
+            ],
+            [
+              26.735,
+              7.02
+            ],
+            [
+              26.735,
+              8.406
+            ]
+          ],
+          [
+            [
+              18.459,
+              23.572
+            ],
+            [
+              18.459,
+              21.059
+            ],
+            [
+              14.949,
+              21.059
+            ],
+            [
+              14.949,
+              23.572
+            ],
+            [
+              18.459,
+              23.572
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "room_1",
+      "properties": {
+        "feature_type": "room",
+        "room_id": 1,
+        "label": "Room 1",
+        "area_sqft": 306.34,
+        "area_m2": 28.46,
+        "dimension_ft": "24'9\" x 13'11\"",
+        "dimension_metric": "7.55m x 4.25m",
+        "span_length_ft": 24.79,
+        "span_width_ft": 13.95,
+        "span_length_m": 7.55,
+        "span_width_m": 4.25,
+        "is_outdoor": false,
+        "fixtures": [
+          "countertop"
+        ],
+        "units": "feet"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              28.902,
+              7.02
+            ],
+            [
+              28.902,
+              31.155
+            ],
+            [
+              23.269,
+              31.155
+            ],
+            [
+              23.269,
+              29.248
+            ],
+            [
+              22.662,
+              29.248
+            ],
+            [
+              22.662,
+              31.805
+            ],
+            [
+              19.412,
+              31.805
+            ],
+            [
+              19.412,
+              31.155
+            ],
+            [
+              14.949,
+              31.155
+            ],
+            [
+              14.949,
+              24.179
+            ],
+            [
+              18.979,
+              24.179
+            ],
+            [
+              18.979,
+              20.452
+            ],
+            [
+              14.949,
+              20.452
+            ],
+            [
+              14.949,
+              8.406
+            ],
+            [
+              26.735,
+              8.406
+            ],
+            [
+              26.735,
+              7.02
+            ],
+            [
+              28.902,
+              7.02
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "room_2",
+      "properties": {
+        "feature_type": "room",
+        "room_id": 2,
+        "label": "Room 2",
+        "area_sqft": 118.42,
+        "area_m2": 11.0,
+        "dimension_ft": "12'6\" x 9'6\"",
+        "dimension_metric": "3.80m x 2.89m",
+        "span_length_ft": 12.48,
+        "span_width_ft": 9.49,
+        "span_length_m": 3.8,
+        "span_width_m": 2.89,
+        "is_outdoor": false,
+        "fixtures": [
+          "bed"
+        ],
+        "units": "feet"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              29.552,
+              12.133
+            ],
+            [
+              42.031,
+              12.133
+            ],
+            [
+              42.031,
+              21.622
+            ],
+            [
+              29.552,
+              21.622
+            ],
+            [
+              29.552,
+              12.133
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "room_3",
+      "properties": {
+        "feature_type": "room",
+        "room_id": 3,
+        "label": "Room 3",
+        "area_sqft": 53.45,
+        "area_m2": 4.97,
+        "dimension_ft": "9'6\" x 5'8\"",
+        "dimension_metric": "2.89m x 1.72m",
+        "span_length_ft": 9.49,
+        "span_width_ft": 5.63,
+        "span_length_m": 2.89,
+        "span_width_m": 1.72,
+        "is_outdoor": false,
+        "fixtures": [
+          "toilet"
+        ],
+        "units": "feet"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              42.031,
+              22.315
+            ],
+            [
+              42.031,
+              31.805
+            ],
+            [
+              36.398,
+              31.805
+            ],
+            [
+              36.398,
+              22.315
+            ],
+            [
+              42.031,
+              22.315
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "room_4",
+      "properties": {
+        "feature_type": "room",
+        "room_id": 4,
+        "label": "Room 4",
+        "area_sqft": 51.36,
+        "area_m2": 4.77,
+        "dimension_ft": "12'3\" x 4'2\"",
+        "dimension_metric": "3.72m x 1.28m",
+        "span_length_ft": 12.22,
+        "span_width_ft": 4.2,
+        "span_length_m": 3.72,
+        "span_width_m": 1.28,
+        "is_outdoor": true,
+        "fixtures": [],
+        "units": "feet"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              42.031,
+              7.02
+            ],
+            [
+              42.031,
+              11.223
+            ],
+            [
+              29.811,
+              11.223
+            ],
+            [
+              29.811,
+              7.02
+            ],
+            [
+              42.031,
+              7.02
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "room_5",
+      "properties": {
+        "feature_type": "room",
+        "room_id": 5,
+        "label": "Room 5",
+        "area_sqft": 45.16,
+        "area_m2": 4.2,
+        "dimension_ft": "9'6\" x 6'2\"",
+        "dimension_metric": "2.89m x 1.88m",
+        "span_length_ft": 9.49,
+        "span_width_ft": 6.15,
+        "span_length_m": 2.89,
+        "span_width_m": 1.88,
+        "is_outdoor": false,
+        "fixtures": [],
+        "units": "feet"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              35.704,
+              22.315
+            ],
+            [
+              35.704,
+              31.805
+            ],
+            [
+              29.552,
+              31.805
+            ],
+            [
+              29.552,
+              26.085
+            ],
+            [
+              33.061,
+              26.085
+            ],
+            [
+              33.061,
+              22.315
+            ],
+            [
+              35.704,
+              22.315
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "room_6",
+      "properties": {
+        "feature_type": "room",
+        "room_id": 6,
+        "label": "Room 6",
+        "area_sqft": 9.45,
+        "area_m2": 0.88,
+        "dimension_ft": "3'2\" x 2'11\"",
+        "dimension_metric": "0.98m x 0.90m",
+        "span_length_ft": 3.21,
+        "span_width_ft": 2.95,
+        "span_length_m": 0.98,
+        "span_width_m": 0.9,
+        "is_outdoor": false,
+        "fixtures": [],
+        "units": "feet"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              29.552,
+              22.315
+            ],
+            [
+              32.498,
+              22.315
+            ],
+            [
+              32.498,
+              25.522
+            ],
+            [
+              29.552,
+              25.522
+            ],
+            [
+              29.552,
+              22.315
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "room_7",
+      "properties": {
+        "feature_type": "room",
+        "room_id": 7,
+        "label": "Room 7",
+        "area_sqft": 8.82,
+        "area_m2": 0.82,
+        "dimension_ft": "3'6\" x 2'6\"",
+        "dimension_metric": "1.07m x 0.77m",
+        "span_length_ft": 3.51,
+        "span_width_ft": 2.51,
+        "span_length_m": 1.07,
+        "span_width_m": 0.77,
+        "is_outdoor": false,
+        "fixtures": [],
+        "units": "feet"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              14.949,
+              21.059
+            ],
+            [
+              18.459,
+              21.059
+            ],
+            [
+              18.459,
+              23.572
+            ],
+            [
+              14.949,
+              23.572
+            ],
+            [
+              14.949,
+              21.059
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

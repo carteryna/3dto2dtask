@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 659 741" width="659" height="741">
+  <defs>
+    <style>
+      .bg-paper { fill: #fdfdfd; }
+      .grid-line { stroke: #ededed; stroke-width: 1px; }
+      .wall-solid { fill: #2c2c2c; stroke: #141414; stroke-width: 2px; fill-rule: evenodd; }
+      .room-indoor { fill: #ffffff; stroke: #404040; stroke-width: 1px; }
+      .room-outdoor { fill: #f4faff; stroke: #404040; stroke-width: 1px; }
+      .badge-box { fill: #ffffff; stroke: #b0b0b0; stroke-width: 1px; rx: 2px; }
+      .badge-title { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 8.5px; font-weight: bold; fill: #111111; text-anchor: middle; }
+      .badge-area { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 7.5px; fill: #505050; text-anchor: middle; }
+      .badge-dim { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 7.5px; font-weight: 600; fill: #9e2a00; text-anchor: middle; }
+      .decking-line { stroke: #d0e4f0; stroke-width: 1.5px; }
+    </style>
+  </defs>
+  <!-- Sheet Background -->
+  <rect width="659" height="741" class="bg-paper" />
+  <!-- Drafting Grid -->
+  <g id="drafting-grid">
+    <line x1="0" y1="90" x2="0" y2="741" class="grid-line" />
+    <line x1="40" y1="90" x2="40" y2="741" class="grid-line" />
+    <line x1="80" y1="90" x2="80" y2="741" class="grid-line" />
+    <line x1="120" y1="90" x2="120" y2="741" class="grid-line" />
+    <line x1="160" y1="90" x2="160" y2="741" class="grid-line" />
+    <line x1="200" y1="90" x2="200" y2="741" class="grid-line" />
+    <line x1="240" y1="90" x2="240" y2="741" class="grid-line" />
+    <line x1="280" y1="90" x2="280" y2="741" class="grid-line" />
+    <line x1="320" y1="90" x2="320" y2="741" class="grid-line" />
+    <line x1="360" y1="90" x2="360" y2="741" class="grid-line" />
+    <line x1="400" y1="90" x2="400" y2="741" class="grid-line" />
+    <line x1="440" y1="90" x2="440" y2="741" class="grid-line" />
+    <line x1="480" y1="90" x2="480" y2="741" class="grid-line" />
+    <line x1="520" y1="90" x2="520" y2="741" class="grid-line" />
+    <line x1="560" y1="90" x2="560" y2="741" class="grid-line" />
+    <line x1="600" y1="90" x2="600" y2="741" class="grid-line" />
+    <line x1="640" y1="90" x2="640" y2="741" class="grid-line" />
+    <line x1="0" y1="90" x2="659" y2="90" class="grid-line" />
+    <line x1="0" y1="130" x2="659" y2="130" class="grid-line" />
+    <line x1="0" y1="170" x2="659" y2="170" class="grid-line" />
+    <line x1="0" y1="210" x2="659" y2="210" class="grid-line" />
+    <line x1="0" y1="250" x2="659" y2="250" class="grid-line" />
+    <line x1="0" y1="290" x2="659" y2="290" class="grid-line" />
+    <line x1="0" y1="330" x2="659" y2="330" class="grid-line" />
+    <line x1="0" y1="370" x2="659" y2="370" class="grid-line" />
+    <line x1="0" y1="410" x2="659" y2="410" class="grid-line" />
+    <line x1="0" y1="450" x2="659" y2="450" class="grid-line" />
+    <line x1="0" y1="490" x2="659" y2="490" class="grid-line" />
+    <line x1="0" y1="530" x2="659" y2="530" class="grid-line" />
+    <line x1="0" y1="570" x2="659" y2="570" class="grid-line" />
+    <line x1="0" y1="610" x2="659" y2="610" class="grid-line" />
+    <line x1="0" y1="650" x2="659" y2="650" class="grid-line" />
+    <line x1="0" y1="690" x2="659" y2="690" class="grid-line" />
+    <line x1="0" y1="730" x2="659" y2="730" class="grid-line" />
+  </g>
+  <!-- Solid Structural Walls (Zero Unclaimed Gaps) -->
+  <g id="structural-walls">
+    <path id="wall_1" d="M 102.0 307.5 L 102.0 645.0 L 352.5 645.0 L 352.5 719.0 L 643.0 719.0 L 643.0 106.5 L 24.0 106.5 L 24.0 307.5 L 102.0 307.5 Z M 380.0 445.0 L 354.0 445.0 L 354.0 305.0 L 630.0 305.0 L 630.0 573.0 L 567.0 573.0 L 567.0 518.0 L 554.0 518.0 L 554.0 535.0 L 380.0 535.0 L 380.0 445.0 Z M 630.0 119.0 L 630.0 292.0 L 515.0 292.0 L 515.0 119.0 L 630.0 119.0 Z M 630.0 586.0 L 630.0 707.0 L 567.0 707.0 L 567.0 586.0 L 630.0 586.0 Z M 372.0 702.0 L 372.0 645.0 L 380.0 645.0 L 380.0 547.0 L 554.0 547.0 L 554.0 702.0 L 372.0 702.0 Z M 500.0 292.0 L 328.0 292.0 L 328.0 234.0 L 354.0 234.0 L 354.0 119.0 L 500.0 119.0 L 500.0 292.0 Z M 184.0 338.0 L 184.0 292.0 L 94.0 292.0 L 94.0 119.0 L 236.0 119.0 L 236.0 169.0 L 318.0 169.0 L 318.0 305.0 L 342.0 305.0 L 342.0 456.0 L 366.0 456.0 L 366.0 633.0 L 113.0 633.0 L 113.0 338.0 L 184.0 338.0 Z M 342.0 169.0 L 342.0 225.0 L 328.0 225.0 L 328.0 169.0 L 342.0 169.0 Z M 342.0 158.0 L 246.0 158.0 L 246.0 119.0 L 342.0 119.0 L 342.0 158.0 Z M 175.0 305.0 L 175.0 325.0 L 113.0 325.0 L 113.0 305.0 L 175.0 305.0 Z M 80.0 292.0 L 36.0 292.0 L 36.0 119.0 L 80.0 119.0 L 80.0 292.0 Z" class="wall-solid" />
+  </g>
+  <!-- Architectural Rooms -->
+  <g id="architectural-rooms">
+    <path id="room_1" d="M 94.0 292.0 L 184.0 292.0 L 184.0 338.0 L 113.0 338.0 L 113.0 633.0 L 366.0 633.0 L 366.0 456.0 L 342.0 456.0 L 342.0 305.0 L 318.0 305.0 L 318.0 169.0 L 236.0 169.0 L 236.0 119.0 L 94.0 119.0 L 94.0 292.0 Z" class="room-indoor" />
+    <path id="room_2" d="M 354.0 305.0 L 354.0 445.0 L 380.0 445.0 L 380.0 535.0 L 554.0 535.0 L 554.0 518.0 L 567.0 518.0 L 567.0 573.0 L 630.0 573.0 L 630.0 305.0 L 354.0 305.0 Z" class="room-indoor" />
+    <path id="room_3" d="M 380.0 547.0 L 380.0 645.0 L 372.0 645.0 L 372.0 702.0 L 554.0 702.0 L 554.0 547.0 L 380.0 547.0 Z" class="room-outdoor" />
+    <line x1="376.0" y1="553.0" x2="550.0" y2="553.0" class="decking-line" />
+    <line x1="376.0" y1="561.0" x2="550.0" y2="561.0" class="decking-line" />
+    <line x1="376.0" y1="569.0" x2="550.0" y2="569.0" class="decking-line" />
+    <line x1="376.0" y1="577.0" x2="550.0" y2="577.0" class="decking-line" />
+    <line x1="376.0" y1="585.0" x2="550.0" y2="585.0" class="decking-line" />
+    <line x1="376.0" y1="593.0" x2="550.0" y2="593.0" class="decking-line" />
+    <line x1="376.0" y1="601.0" x2="550.0" y2="601.0" class="decking-line" />
+    <line x1="376.0" y1="609.0" x2="550.0" y2="609.0" class="decking-line" />
+    <line x1="376.0" y1="617.0" x2="550.0" y2="617.0" class="decking-line" />
+    <line x1="376.0" y1="625.0" x2="550.0" y2="625.0" class="decking-line" />
+    <line x1="376.0" y1="633.0" x2="550.0" y2="633.0" class="decking-line" />
+    <line x1="376.0" y1="641.0" x2="550.0" y2="641.0" class="decking-line" />
+    <line x1="376.0" y1="649.0" x2="550.0" y2="649.0" class="decking-line" />
+    <line x1="376.0" y1="657.0" x2="550.0" y2="657.0" class="decking-line" />
+    <line x1="376.0" y1="665.0" x2="550.0" y2="665.0" class="decking-line" />
+    <line x1="376.0" y1="673.0" x2="550.0" y2="673.0" class="decking-line" />
+    <line x1="376.0" y1="681.0" x2="550.0" y2="681.0" class="decking-line" />
+    <line x1="376.0" y1="689.0" x2="550.0" y2="689.0" class="decking-line" />
+    <line x1="376.0" y1="697.0" x2="550.0" y2="697.0" class="decking-line" />
+    <path id="room_4" d="M 354.0 234.0 L 328.0 234.0 L 328.0 292.0 L 500.0 292.0 L 500.0 119.0 L 354.0 119.0 L 354.0 234.0 Z" class="room-indoor" />
+    <path id="room_5" d="M 515.0 119.0 L 515.0 292.0 L 630.0 292.0 L 630.0 119.0 L 515.0 119.0 Z" class="room-indoor" />
+    <path id="room_6" d="M 36.0 119.0 L 36.0 292.0 L 80.0 292.0 L 80.0 119.0 L 36.0 119.0 Z" class="room-indoor" />
+    <path id="room_7" d="M 567.0 586.0 L 567.0 707.0 L 630.0 707.0 L 630.0 586.0 L 567.0 586.0 Z" class="room-indoor" />
+    <path id="room_8" d="M 246.0 119.0 L 246.0 158.0 L 342.0 158.0 L 342.0 119.0 L 246.0 119.0 Z" class="room-indoor" />
+    <path id="room_9" d="M 113.0 325.0 L 175.0 325.0 L 175.0 305.0 L 113.0 305.0 L 113.0 325.0 Z" class="room-indoor" />
+    <path id="room_10" d="M 328.0 225.0 L 342.0 225.0 L 342.0 169.0 L 328.0 169.0 L 328.0 225.0 Z" class="room-indoor" />
+  </g>
+  <!-- Room Dimension Callout Badges -->
+  <g id="room-labels">
+    <g id="badge_1">
+      <rect x="179.1" y="496.0" width="110.8" height="32.0" class="badge-box" />
+      <text x="234.5" y="506.0" class="badge-title">Room 1 (countertop)</text>
+      <text x="234.5" y="516.0" class="badge-area">260 SQ FT (24.1 m²)</text>
+      <text x="234.5" y="525.0" class="badge-dim">24'7" x 13'0"</text>
+    </g>
+    <g id="badge_2">
+      <rect x="437.1" y="404.1" width="110.8" height="32.0" class="badge-box" />
+      <text x="492.5" y="414.1" class="badge-title">Room 2 (bed)</text>
+      <text x="492.5" y="424.1" class="badge-area">145 SQ FT (13.5 m²)</text>
+      <text x="492.5" y="433.1" class="badge-dim">13'3" x 12'10"</text>
+    </g>
+    <g id="badge_3">
+      <rect x="412.8" y="608.5" width="100.4" height="32.0" class="badge-box" />
+      <text x="463.0" y="618.5" class="badge-title">Room 3 (balcony)</text>
+      <text x="463.0" y="628.5" class="badge-area">63 SQ FT (5.8 m²)</text>
+      <text x="463.0" y="637.5" class="badge-dim">8'9" x 7'5"</text>
+    </g>
+    <g id="badge_4">
+      <rect x="371.4" y="176.7" width="110.8" height="32.0" class="badge-box" />
+      <text x="426.8" y="186.7" class="badge-title">Room 4 (countertop)</text>
+      <text x="426.8" y="196.7" class="badge-area">61 SQ FT (5.7 m²)</text>
+      <text x="426.8" y="205.7" class="badge-dim">8'3" x 8'3"</text>
+    </g>
+    <g id="badge_5">
+      <rect x="517.1" y="189.5" width="110.8" height="32.0" class="badge-box" />
+      <text x="572.5" y="199.5" class="badge-title">Room 5 (countertop)</text>
+      <text x="572.5" y="209.5" class="badge-area">46 SQ FT (4.2 m²)</text>
+      <text x="572.5" y="218.5" class="badge-dim">8'3" x 5'6"</text>
+    </g>
+    <g id="badge_6">
+      <rect x="3.6" y="194.5" width="108.8" height="22.0" class="badge-box" />
+      <text x="58.0" y="203.5" class="badge-title">Room 6</text>
+      <text x="58.0" y="212.5" class="badge-dim">17 sf | 8'3" x 2'1"</text>
+    </g>
+    <g id="badge_7">
+      <rect x="541.5" y="635.5" width="114.0" height="22.0" class="badge-box" />
+      <text x="598.5" y="644.5" class="badge-title">Room 7</text>
+      <text x="598.5" y="653.5" class="badge-dim">17 sf | 5'10" x 3'0"</text>
+    </g>
+    <g id="badge_8">
+      <rect x="239.6" y="127.5" width="108.8" height="22.0" class="badge-box" />
+      <text x="294.0" y="136.5" class="badge-title">Room 8</text>
+      <text x="294.0" y="145.5" class="badge-dim">9 sf | 4'7" x 1'10"</text>
+    </g>
+    <g id="badge_9">
+      <rect x="89.6" y="304.0" width="108.8" height="22.0" class="badge-box" />
+      <text x="144.0" y="313.0" class="badge-title">Room 9</text>
+      <text x="144.0" y="322.0" class="badge-dim">3 sf | 3'0" x 0'11"</text>
+    </g>
+    <g id="badge_10">
+      <rect x="283.2" y="186.0" width="103.6" height="22.0" class="badge-box" />
+      <text x="335.0" y="195.0" class="badge-title">Room 10</text>
+      <text x="335.0" y="204.0" class="badge-dim">2 sf | 2'8" x 0'8"</text>
+    </g>
+  </g>
+  <!-- Architectural Header Banner (strictly above plan) -->
+  <g id="blueprint-header">
+    <rect x="0" y="0" width="659" height="90" fill="#222222" />
+    <line x1="0" y1="88" x2="659" y2="88" stroke="#373737" stroke-width="1px" />
+    <line x1="0" y1="89" x2="659" y2="89" stroke="#D04E18" stroke-width="2px" />
+    <!-- North Indicator -->
+    <circle cx="26" cy="45" r="16" fill="none" stroke="#787878" stroke-width="1px" />
+    <polygon points="26,31 26,59 21,45" fill="#e6e6e6" />
+    <polygon points="26,31 26,59 31,45" fill="none" stroke="#e6e6e6" stroke-width="1px" />
+    <text x="26" y="27" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8px" font-weight="bold" fill="#f0f0f0" text-anchor="middle">N</text>
+    <text x="52" y="22" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8px" font-weight="bold" fill="#aaaaaa" letter-spacing="0.5px">ARCHITECTURAL 2D BLUEPRINT</text>
+    <text x="52" y="42" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12px" font-weight="bold" fill="#ffffff">HIGHLANDLUX-CITADEL-1 BED 1 BATH 6</text>
+    <text x="52" y="60" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8.5px" fill="#d7d7d7">TARGET: 623 sf  |  NET: 560.1 sf  |  BALC: 62.9 sf  |  GROSS: 752.9 sf</text>
+    <text x="52" y="76" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8.5px" font-weight="bold" fill="#50a0ff">SCALE: 1' = 20.89 px  |  ZERO WALL GAPS CAD</text>
+  </g>
+</svg>

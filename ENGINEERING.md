@@ -29,7 +29,7 @@ Direct pixel segmentation (whether via classical edge detection, watershed, or f
 
 | Input 3D Perspective Render (Artistic Cutaway) | Target 2D Architectural CAD Blueprint |
 | :---: | :---: |
-| ![Input 3D Render](data/output/debug_v5/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./02_rectified_render.png) | ![Target 2D Blueprint](data/output/blueprint_v5_heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft..png) |
+| ![Input 3D Render](docs/images/heritage_02_rectified_render.png) | ![Target 2D Blueprint](docs/images/blueprint_v5_heritage_towers.png) |
 | *Vanishing-point convergence, vertical wall extrusions, furniture occlusion, decorative noise* | *Orthogonal Manhattan vectorization, metric scale, room dimensions, top header* |
 
 ---
@@ -64,7 +64,7 @@ $$\Delta x = H \cdot \frac{x - c_x}{f_x}, \quad \Delta y = H \cdot \frac{y - c_y
 
 Where $(c_x, c_y)$ is the virtual camera principal point. When closed contours were extracted from wall-top masks, rooms were **asymmetrically shifted and scaled by 20% to 40%**. North-facing rooms were artificially shrunken, while South-facing rooms were artificially expanded. Attempting to align these boundaries to the true floor plane resulted in floating walls that hovered across living rooms.
 
-![Iteration 1 Extrusion & Wall-Top Conflation](data/output/debug/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./02_raw_wall_mask.png)
+![Iteration 1 Extrusion & Wall-Top Conflation](docs/images/v1_wall_mask_extrusion.png)
 *Figure 2.1: Iteration 1 failure mode. Automated LAB/RGB color thresholding isolates white wall tops ($Z = H$) but conflates them with white ceiling dimension strings (`13'3" x 13'3"`), window blinds, and white furniture (armchairs, toilets, water heaters), shifting room boundaries by up to 40%.*
 
 ---
@@ -78,7 +78,7 @@ Real-world apartments are heavily staged with volumetric 3D furniture: king beds
 * **Boundary Hugging:** Segmentation masks adhered tightly to the visual contours of furniture. RDP simplification produced irregular, jagged 30-to-50-vertex polygons that traced around bed comforters, couch pillows, and dining chairs rather than extracting clean, 4-sided Manhattan room rectangles.
 * **The "Hole-Punching" Dilemma:** In Iteration 3, we attempted to isolate floor regions and subtract detected furniture items. This caused an even worse failure: rooms became hollow, doughnut-shaped polygons with interior structural voids where beds and sofas once stood.
 
-![Iteration 1 & 2 Furniture Contour Hugging](data/output/debug/limestone%20ranch_santa%20fe_625sq/08_raw_vs_simplified_contours.png)
+![Iteration 1 & 2 Furniture Contour Hugging](docs/images/v1_furniture_contour_hugging.png)
 *Figure 2.2: Iteration 1 & 2 failure mode. Contour tracing (red) and Douglas-Peucker simplification (green) hugging the silhouettes of beds, nightstands, sectional couches, coffee tables, and kitchen counters instead of recovering true rectangular room perimeters.*
 
 ---
@@ -99,7 +99,7 @@ A 2D homography is mathematically valid **if and only if all transformed points 
 
 | Roofline Flattening vs Ground Shearing | Independent Bounding Box Overlaps |
 | :---: | :---: |
-| ![Iteration 2 Homography Ground Plane Shearing](data/output/debug_v2/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./02_flattened.png) | ![Iteration 2 Bounding Box Overlaps](data/output/debug_v2/highlandlux-citadel-1%20Bed%201%20Bath%20623%20Sq.%20Ft./09_grid_snapped_rectangles.png) |
+| ![Iteration 2 Homography Ground Plane Shearing](docs/images/v2_homography_shearing.png) | ![Iteration 2 Bounding Box Overlaps](docs/images/v2_bounding_box_overlaps.png) |
 | *Figure 2.3a: Ceiling corners flattened at $Z=H$, causing floor-level vertical walls to shear and warp.* | *Figure 2.3b: Fitting independent `minAreaRect` boxes causes massive 50–100 px room overlaps and gaps.* |
 
 ---
@@ -121,7 +121,7 @@ Zero-shot models (trained predominantly on horizontal, eye-level datasets like C
 1. **The "Bed-as-Bathtub" Hallucination:** In `highlandlux_citadel`, a king-size bed with white bedding, smooth duvet shading, and an inset headboard was classified with high confidence ($> 0.82$) as a **bathtub**. Because bathtubs have a standard length of $5.0\text{ ft}$ while king beds have a length of $6.67\text{ ft}$, this misclassification injected a catastrophic $33\%$ error into the scale calibration engine.
 2. **Countertop & Cabinet Failure:** Kitchen countertops with barstools were classified alternately as "dining tables" or fragmented into "benches." Slit filters designed to detect doorway breaks triggered false positives across curtain folds, area rugs, and dark hardwood floorboards.
 
-![Iteration 4 Object Detection Collapse](data/output/debug_v4/highlandlux-citadel-1%20Bed%201%20Bath%20623%20Sq.%20Ft./04_detected_furniture.png)
+![Iteration 4 Object Detection Collapse](docs/images/v4_object_detection_collapse.png)
 *Figure 3.1: Iteration 4 failure mode. Zero-shot object detection collapsing under oblique isometric pitch. The model hallucinates sofas on partition walls (`SOFA (0.34)`), dining tables on balcony planter ledges (`DINING_TABLE (0.80)`), chairs on bathroom sinks, and produces dense, conflicting bounding boxes.*
 
 ### 3.2 Data Starvation ($N = 3$) vs. Heuristic Brittleness
@@ -139,7 +139,7 @@ With $N = 3$, machine learning models cannot generalize, and classical rule-base
 
 | Ray-Shooting Line Overshoot / Undershoot | Planar Face Sliver & Bridging Collapse |
 | :---: | :---: |
-| ![Iteration 4 Ray Shooting Overshoot](data/output/debug_v4/limestone%20ranch_santa%20fe_625sq/06_wall_centerlines.png) | ![Iteration 4 Planar Face Sliver](data/output/debug_v4/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./07_planar_faces.png) |
+| ![Iteration 4 Ray Shooting Overshoot](docs/images/v4_ray_shooting_overshoot.png) | ![Iteration 4 Planar Face Sliver](docs/images/v4_planar_faces_sliver.png) |
 | *Figure 3.2a: Line extensions overshooting across open living/dining spaces.* | *Figure 3.2b: Open patio door fuses bedroom & balcony into one giant face (`91,496 px`).* |
 
 ```
@@ -189,11 +189,11 @@ By supplying a lightweight semantic markup (color-coded wall centerlines and fix
 
 | Processing Phase | Method & Invariants | Visual Output Artifact |
 | :---: | :--- | :---: |
-| **Phase 1: Homography Rectification** | **1D Pitch Tilt Rectification (`rectification.py`):** Solves for vertical vanishing points $v_y$ via RANSAC line intersection, warping camera tilt onto a plumb orthographic ground plane while preserving horizontal aspect ratios. | ![Phase 1 Rectification Overlay](data/output/debug_v5/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./04_rectified_composite_overlay.png) |
-| **Phase 2: Topological Extraction** | **Axial Door Bridging (`topology.py`):** Wall-constrained directional morphological closing bridges doorway openings without bleeding across rooms, extracting closed room cycles with guaranteed zero overlap. | ![Phase 2 Topological Rooms](data/output/debug_v5/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./08_topological_rooms_overlay.png) |
-| **Phase 3: Manhattan Regularization** | **Direction-Aware Snapping (`geometry.py`):** Douglas-Peucker simplification, cardinal grouping (`N/S/E/W`), wall thickness normalization ($\ge 10\text{ px} \approx 6\text{ in}$), resolving $0.0000\text{ px}^2$ overlap and $0.0000\text{ px}^2$ gaps. | ![Phase 3 Manhattan Wireframe](data/output/debug_v5/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./11_manhattan_shared_wall_wireframe.png) |
-| **Phase 4: Conformal Scale Engine** | **Multi-Fixture Scaling (`scale.py`):** Derives master scale $S = \sqrt{A_{\text{px}} / A_{\text{target}}}$ and cross-validates against standard fixture anchors (beds: $8.5\%$ err, toilets: $7.5\%$ err); computes length $\times$ width room spans. | ![Phase 4 Multi-Fixture Scaling](data/output/debug_v5/heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft./14_fixture_dimension_verification.png) |
-| **Phase 5: Architectural CAD Synthesis** | **Publication CAD Rendering (`visualizer.py` & `export.py`):** Synthesizes publication-grade blueprints with top header banners (unblocking lower rooms), drafting grids, compact badges, layered SVGs, and RFC 7946 GeoJSON. | ![Phase 5 Publication Blueprint](data/output/blueprint_v5_heritage%20towers_a1_1%20Bed%201%20Bath%20593%20Sq.%20Ft..png) |
+| **Phase 1: Homography Rectification** | **1D Pitch Tilt Rectification (`rectification.py`):** Solves for vertical vanishing points $v_y$ via RANSAC line intersection, warping camera tilt onto a plumb orthographic ground plane while preserving horizontal aspect ratios. | ![Phase 1 Rectification Overlay](docs/images/heritage_04_rectified_composite.png) |
+| **Phase 2: Topological Extraction** | **Axial Door Bridging (`topology.py`):** Wall-constrained directional morphological closing bridges doorway openings without bleeding across rooms, extracting closed room cycles with guaranteed zero overlap. | ![Phase 2 Topological Rooms](docs/images/heritage_08_topological_rooms.png) |
+| **Phase 3: Manhattan Regularization** | **Direction-Aware Snapping (`geometry.py`):** Douglas-Peucker simplification, cardinal grouping (`N/S/E/W`), wall thickness normalization ($\ge 10\text{ px} \approx 6\text{ in}$), resolving $0.0000\text{ px}^2$ overlap and $0.0000\text{ px}^2$ gaps. | ![Phase 3 Manhattan Wireframe](docs/images/heritage_11_manhattan_wireframe.png) |
+| **Phase 4: Conformal Scale Engine** | **Multi-Fixture Scaling (`scale.py`):** Derives master scale $S = \sqrt{A_{\text{px}} / A_{\text{target}}}$ and cross-validates against standard fixture anchors (beds: $8.5\%$ err, toilets: $7.5\%$ err); computes length $\times$ width room spans. | ![Phase 4 Multi-Fixture Scaling](docs/images/heritage_14_fixture_dimensions.png) |
+| **Phase 5: Architectural CAD Synthesis** | **Publication CAD Rendering (`visualizer.py` & `export.py`):** Synthesizes publication-grade blueprints with top header banners (unblocking lower rooms), drafting grids, compact badges, layered SVGs, and RFC 7946 GeoJSON. | ![Phase 5 Publication Blueprint](docs/images/blueprint_v5_heritage_towers.png) |
 
 ---
 

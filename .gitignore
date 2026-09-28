@@ -65,13 +65,15 @@ coverage.xml
 *.pth
 *.onnx
 
-# Generated outputs (keep the directory placeholder)
+# Generated outputs (keep the directory placeholder, but track final deliverables)
 data/output/*
 !data/output/.gitkeep
+!data/output/blueprint_v5_*
 
 # Local floor-plan renders (keep the placeholder and any sample files)
 inout_data/*
 !inout_data/.gitkeep
+!inout_data/*.webp
 !inout_data/*sample*
 !inout_data/samples/
 !inout_data/samples/**
