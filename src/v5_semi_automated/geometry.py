@@ -71,9 +71,10 @@ class SemiAutomatedGeometry:
         self.params = self.config.get("v5_geometry", {})
         self.approx_epsilon = float(self.params.get("approx_epsilon_px", 4.0))
         self.min_segment_px = float(self.params.get("min_segment_px", 12.0))
-        self.coord_snap_px = float(self.params.get("coord_snap_px", 12.0))
-        self.min_polygon_area = float(self.params.get("min_polygon_area_px", 600.0))
+        self.coord_snap_px = float(self.params.get("coord_snap_px", 4.0))
+        self.min_polygon_area = float(self.params.get("min_polygon_area_px", 500.0))
         self.max_ortho_dev_tol = float(self.params.get("max_ortho_dev_deg", 0.5))
+        self.min_wall_thickness = float(self.params.get("min_wall_thickness_px", 10.0))
 
     def process(
         self,
@@ -109,12 +110,15 @@ class SemiAutomatedGeometry:
         regularized_rooms = self._match_rooms_to_faces(topology_result.rooms, faces)
         notes.append(f"Associated {len(regularized_rooms)} regularized rooms with topological metadata.")
 
-        # 6. Attach fixtures from topology result to regularized rooms
+        # 6. Enforce standard wall clearance across adjacent rooms (no thin lines)
+        regularized_rooms = self._enforce_standard_wall_clearance(regularized_rooms, min_wall_px=self.min_wall_thickness)
+
+        # 7. Attach fixtures from topology result to regularized rooms
         if topology_result.furniture_items:
             self._attach_furniture_to_rooms(regularized_rooms, topology_result.furniture_items)
             notes.append(f"Spatial join attached {len(topology_result.furniture_items)} fixtures to rooms.")
 
-        # 7. Compute Quantitative QA Gate 3 Metrics
+        # 8. Compute Quantitative QA Gate 3 Metrics
         max_overlap, max_ortho_dev, mean_ortho_dev = self._compute_metrics(regularized_rooms)
         is_gate3_passed = (max_overlap <= 0.0001) and (max_ortho_dev <= self.max_ortho_dev_tol) and (len(regularized_rooms) == len(topology_result.rooms))
 
@@ -200,23 +204,38 @@ class SemiAutomatedGeometry:
         return self._drop_duplicates(ring)
 
     def _snap_rings(self, rings: Sequence[np.ndarray], tolerance: float) -> List[np.ndarray]:
-        """Snap nearly collinear parallel edges across adjacent rooms to a shared coordinate."""
-        horizontal: List[EdgeRecord] = []
-        vertical: List[EdgeRecord] = []
+        """Snap nearly collinear parallel edges across adjacent rooms to a shared coordinate.
+
+        Edges are clustered strictly by facing direction (NORTH, SOUTH, EAST, WEST) so that
+        opposite-facing edges separated by a physical wall are NEVER collapsed together,
+        guaranteeing standard physical wall thickness across the entire blueprint.
+        """
+        records: Dict[str, List[EdgeRecord]] = {"NORTH": [], "SOUTH": [], "EAST": [], "WEST": []}
 
         for ring_idx, ring in enumerate(rings):
             n = len(ring)
             for edge_idx in range(n):
                 p1 = ring[edge_idx]
                 p2 = ring[(edge_idx + 1) % n]
-                length = float(abs(p2[0] - p1[0]) + abs(p2[1] - p1[1]))
-                if self._is_horizontal(p1, p2):
-                    horizontal.append(((p1[1] + p2[1]) / 2.0, length, ring_idx, edge_idx))
-                else:
-                    vertical.append(((p1[0] + p2[0]) / 2.0, length, ring_idx, edge_idx))
+                dx = p2[0] - p1[0]
+                dy = p2[1] - p1[1]
+                length = float(abs(dx) + abs(dy))
+                if abs(dy) <= abs(dx):  # Horizontal edge
+                    # CCW exterior ring in screen coords (x right, y down):
+                    # dx > 0: right -> interior is above (y smaller) -> SOUTH boundary
+                    # dx < 0: left -> interior is below (y larger) -> NORTH boundary
+                    dir_key = "SOUTH" if dx > 0 else "NORTH"
+                    records[dir_key].append(((p1[1] + p2[1]) / 2.0, length, ring_idx, edge_idx))
+                else:  # Vertical edge
+                    # dy > 0: down -> interior is left (x smaller) -> EAST boundary
+                    # dy < 0: up -> interior is right (x larger) -> WEST boundary
+                    dir_key = "EAST" if dy > 0 else "WEST"
+                    records[dir_key].append(((p1[0] + p2[0]) / 2.0, length, ring_idx, edge_idx))
 
-        y_of = self._cluster_coordinates(horizontal, tolerance)
-        x_of = self._cluster_coordinates(vertical, tolerance)
+        north_of = self._cluster_coordinates(records["NORTH"], tolerance)
+        south_of = self._cluster_coordinates(records["SOUTH"], tolerance)
+        east_of = self._cluster_coordinates(records["EAST"], tolerance)
+        west_of = self._cluster_coordinates(records["WEST"], tolerance)
 
         snapped: List[np.ndarray] = []
         for ring_idx, ring in enumerate(rings):
@@ -224,12 +243,20 @@ class SemiAutomatedGeometry:
             n = len(updated)
             for edge_idx in range(n):
                 key = (ring_idx, edge_idx)
-                if key in y_of:
-                    y = y_of[key]
+                if key in north_of:
+                    y = north_of[key]
                     updated[edge_idx, 1] = y
                     updated[(edge_idx + 1) % n, 1] = y
-                if key in x_of:
-                    x = x_of[key]
+                elif key in south_of:
+                    y = south_of[key]
+                    updated[edge_idx, 1] = y
+                    updated[(edge_idx + 1) % n, 1] = y
+                elif key in east_of:
+                    x = east_of[key]
+                    updated[edge_idx, 0] = x
+                    updated[(edge_idx + 1) % n, 0] = x
+                elif key in west_of:
+                    x = west_of[key]
                     updated[edge_idx, 0] = x
                     updated[(edge_idx + 1) % n, 0] = x
 
@@ -390,6 +417,34 @@ class SemiAutomatedGeometry:
         # Sort by room_id ascending
         matched.sort(key=lambda r: r.room_id)
         return matched
+
+    def _enforce_standard_wall_clearance(
+        self,
+        rooms: List[RegularizedRoomNode],
+        min_wall_px: float = 10.0,
+    ) -> List[RegularizedRoomNode]:
+        """Ensure all partitions between adjacent rooms have at least min_wall_px standard thickness."""
+        if len(rooms) <= 1:
+            return rooms
+
+        for i in range(len(rooms)):
+            for j in range(i + 1, len(rooms)):
+                r1 = rooms[i]
+                r2 = rooms[j]
+                d = r1.polygon.distance(r2.polygon)
+                if d < min_wall_px:
+                    clearance = (min_wall_px - d) / 2.0 + 0.1
+                    dilated_r2 = r2.polygon.buffer(clearance, cap_style=3, join_style=2)
+                    dilated_r1 = r1.polygon.buffer(clearance, cap_style=3, join_style=2)
+                    p1 = r1.polygon.difference(dilated_r2)
+                    p2 = r2.polygon.difference(dilated_r1)
+                    if isinstance(p1, Polygon) and p1.area >= self.min_polygon_area:
+                        r1.polygon = p1
+                        r1.area_px = float(p1.area)
+                    if isinstance(p2, Polygon) and p2.area >= self.min_polygon_area:
+                        r2.polygon = p2
+                        r2.area_px = float(p2.area)
+        return rooms
 
     def _attach_furniture_to_rooms(
         self,

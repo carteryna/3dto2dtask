@@ -25,6 +25,7 @@ from src.v5_semi_automated.scale import (
     ScaleResult,
     SemiAutomatedScale,
 )
+from src.v5_semi_automated.visualizer import SemiAutomatedVisualizer
 
 # 12 distinct, aesthetically pleasing pastel room colors (BGR)
 ROOM_COLORS: List[Tuple[int, int, int]] = [
@@ -262,6 +263,7 @@ def main():
     topology_engine = SemiAutomatedTopology(args.config)
     geometry_engine = SemiAutomatedGeometry(args.config)
     scale_engine = SemiAutomatedScale(args.config)
+    visualizer = SemiAutomatedVisualizer(args.config)
 
     print(f"=== Iteration 5 Phase 4: Conformal Metric Scale Engine ({len(input_paths)} assets) ===")
 
@@ -342,14 +344,15 @@ def main():
         fix_vis = render_fixture_verification(rect_render, scale_res, topo_res.furniture_layers)
         cv2.imwrite(str(unit_out_dir / "14_fixture_dimension_verification.png"), fix_vis)
 
-        # 3. Save Architectural 2D Blueprint Wireframe
-        bp_vis = render_dimensioned_blueprint(
-            rect_render.shape,
-            scale_res.rooms,
-            scale_res.computed_total_sqft,
-            scale_res.scale_px_per_ft,
+        # 3. Save Architectural 2D Blueprint Wireframe (Solid Continuous Walls, Zero Gaps)
+        bp_res = visualizer.render(
+            scale_result=scale_res,
+            geometry_result=geom_res,
+            topology_result=topo_res,
+            render_shape=rect_render.shape[:2],
+            unit_label=stem,
         )
-        cv2.imwrite(str(unit_out_dir / "15_dimensioned_blueprint_wireframe.png"), bp_vis)
+        cv2.imwrite(str(unit_out_dir / "15_dimensioned_blueprint_wireframe.png"), bp_res.blueprint_image)
 
         results_summary.append({
             "unit": stem,

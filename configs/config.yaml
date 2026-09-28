@@ -209,18 +209,20 @@ v5_rectification:
   output_dir: "data/output/debug_v5"
 
 v5_topology:
-  min_room_area_px: 800.0
+  min_room_area_px: 500.0
   door_bridge_gap_px: 95
   wall_alpha_thresh: 50
   red_diff_thresh: 50
   red_min_thresh: 150
+  standard_wall_thickness_px: 11.5
 
 v5_geometry:
   approx_epsilon_px: 4.0
   min_segment_px: 12.0
-  coord_snap_px: 12.0
-  min_polygon_area_px: 600.0
+  coord_snap_px: 4.0
+  min_polygon_area_px: 500.0
   max_ortho_dev_deg: 0.5
+  min_wall_thickness_px: 10.0
 
 v5_scale:
   cm_per_foot: 30.48
@@ -234,6 +236,22 @@ v5_scale:
   max_area_error_ratio: 0.03
   fallback_scale_px_per_ft: 22.0
   output_dir: "data/output/debug_v5"
+
+v5_blueprint:
+  header_height_px: 90
+  wall_color_bgr: [42, 42, 42]
+  wall_stroke_color_bgr: [18, 18, 18]
+  wall_stroke_px: 2
+  room_interior_bgr: [255, 255, 255]
+  room_outdoor_bgr: [246, 252, 255]
+  grid_step_px: 40
+  grid_color_bgr: [236, 236, 236]
+  canvas_bg_bgr: [252, 252, 252]
+  badge_scale_primary: 0.27
+  badge_scale_secondary: 0.23
+  output_dir: "data/output"
+  debug_output_dir: "data/output/debug_v5"
+
 
 
 

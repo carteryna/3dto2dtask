@@ -23,8 +23,16 @@ from src.v5_semi_automated.scale import (
     ScaleResult,
     SemiAutomatedScale,
 )
+from src.v5_semi_automated.visualizer import (
+    BlueprintResult,
+    SemiAutomatedVisualizer,
+)
+from src.v5_semi_automated.export import (
+    SemiAutomatedExporter,
+)
 
 __all__ = [
+    "BlueprintResult",
     "DimensionedRoom",
     "FixtureScaleAnchor",
     "GeometryResult",
@@ -32,10 +40,12 @@ __all__ = [
     "RegularizedRoomNode",
     "ScaleResult",
     "SemanticGuide",
+    "SemiAutomatedExporter",
     "SemiAutomatedGeometry",
     "SemiAutomatedRectifier",
     "SemiAutomatedScale",
     "SemiAutomatedTopology",
+    "SemiAutomatedVisualizer",
     "TopologicalRoomNode",
     "TopologyResult",
     "classify_guide_format",

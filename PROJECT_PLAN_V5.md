@@ -231,7 +231,7 @@ Development proceeds through five strict stage gates. No phase begins until the 
 | **2** | `topology.py` | **Done** | 100% closed room cycles, zero door leakage | **PASS (0 px overlap, 100% closed, balcony sealed)** |
 | **3** | `geometry.py` | **Done** | Overlap $= 0.0000\text{ px}^2$, Gaps $= 0.0000\text{ px}^2$, Ortho dev $\le 0.5^\circ$ | **PASS (0.0000 px² overlap, 0.00° dev)** |
 | **4** | `scale.py` | **Done** | Multi-fixture scale consensus + Conformal area error $\le 3.0\%$ | **PASS (0.00% area error, fixture-validated)** |
-| **5** | `visualizer.py` / `export.py` | Next | RFC 7946 GeoJSON, SVG blueprint, publication PNG | Pending |
+| **5** | `visualizer.py` / `export.py` | **Done** | RFC 7946 GeoJSON, SVG blueprint, publication PNG, 0 gaps, 0 overlap | **PASS (0.0000 px² gaps, 0.0000 px² overlap, valid RFC 7946 GeoJSON, valid SVG)** |
 
 ---
 
@@ -510,6 +510,95 @@ Executed via Docker (`docker compose run --rm cv-floorplan python scripts/v5_tes
 1. **Conformal Area Accuracy ($0.00\%$ Error):** The mathematical formulation $S = \sqrt{\sum A_{\text{px}} / A_{\text{target}}}$ guarantees zero deviation from advertised leasing square footage while preserving 1:1 isometric room proportions.
 2. **Fixture Scale Alignment:** The measured pixel spans of the bed ($152 \times 203\text{ cm}$) and toilet ($40 \times 70\text{ cm}$) aligned with the conformal scale within $0.9\%\text{--}9.8\%$, physically corroborating that the marketing renders are drawn to consistent real-world architectural proportions.
 3. **Automated Pole of Inaccessibility (`polylabel`):** Placing text badges at the mathematical visual center of room polygons ensures callouts never overlap wall boundaries or bleed outside narrow closets.
+
+---
+
+### Phase 5: Architectural CAD Blueprint Synthesis & Vector Export
+
+#### Deliverables
+* `src/v5_semi_automated/visualizer.py`: Implements `SemiAutomatedVisualizer`, synthesizes the complete spatial partition of the floor plan into Room manifolds and continuous solid Wall manifolds with **strictly zero gaps and zero overlaps**. Renders publication-grade 2D architectural blueprints on textured parchment with subtle drafting grids, solid charcoal walls (`#2A2A2A`), wood-slat outdoor balcony styling, 3-line dimension callouts (`Room ID`, `Functional Label`, `Area`, `Imperial & Metric Dimensions`), dynamic collision avoidance, and comprehensive title blocks.
+* `src/v5_semi_automated/export.py`: Implements `SemiAutomatedExporter` for CAD and GIS workflows:
+  * **RFC 7946 GeoJSON Export (`export_geojson`):** Scaled architectural coordinates in feet, strictly compliant with right-hand orientation (counter-clockwise exterior rings, clockwise interior holes), exporting rooms, solid walls, and outer building envelopes.
+  * **Scalable Vector Graphics Export (`export_svg`):** Multi-layered SVG vector blueprints with drafting grid, structural wall geometry, architectural room spaces, typography, dimension lines, and title blocks.
+* `configs/config.yaml`: Added `v5_blueprint` styling configuration block (`wall_color_bgr: [42, 42, 42]`, `wall_stroke_color_bgr: [18, 18, 18]`, `room_outdoor_bgr: [246, 252, 255]`, `grid_step_px: 40`, `canvas_bg_bgr: [252, 252, 252]`).
+* `scripts/v5_test_blueprint.py`: End-to-end verification harness executing Phases 1 through 5, asserting zero space gaps and overlaps, validating GeoJSON RFC 7946 compliance, verifying SVG XML well-formedness, and producing final publication blueprints in `data/output/`.
+
+#### Zero-Gap Spatial Partition Mechanics
+1. **Mathematical Invariant:**
+   * Every point within the unit footprint belongs to exactly one category: **ROOM** or **WALL**.
+   * Mathematically:
+     $$\Omega_{\text{footprint}} = \Omega_{\text{envelope}} \cup \left( \bigcup_{i=1}^N \Omega_{\text{room}, i} \right)$$
+     $$\Omega_{\text{wall}} = \Omega_{\text{footprint}} \setminus \left( \bigcup_{i=1}^N \Omega_{\text{room}, i} \right)$$
+     $$\text{Overlap}\left(\bigcup_{i=1}^N \Omega_{\text{room}, i},\; \Omega_{\text{wall}}\right) = 0.0000\text{ px}^2$$
+     $$\text{Unclaimed Gaps} = \Omega_{\text{footprint}} \setminus \left(\left(\bigcup_{i=1}^N \Omega_{\text{room}, i}\right) \cup \Omega_{\text{wall}}\right) = 0.0000\text{ px}^2$$
+2. **Solid Continuous Wall Network:**
+   * Rather than drawing individual disjoint room perimeters (which left unrendered white voids between adjacent room walls), the entire structural wall network is rendered as a contiguous polygon mass with room voids cut out.
+   * Partitions between adjacent rooms form solid continuous physical walls with dark charcoal hatching (`#2A2A2A`) and crisp $2\text{ px}$ perimeter outlines (`#121212`).
+
+3. **Wall Width Standardization & Direction-Aware Edge Regularization:**
+   * In human guides, wall widths varied from $5.8\text{ px}$ ($\sim 3\text{ in}$) to $14\text{ px}$ ($\sim 7\text{ in}$). Previously, indiscriminate collinear edge snapping collapsed adjacent room boundaries together, turning interior walls into 0-width boundaries (thin 1-pixel lines).
+   * **Direction-Aware Snapping:** In Phase 3, polygon edges are partitioned into 4 cardinal groups (`NORTH`, `SOUTH`, `EAST`, `WEST`). Only edges facing the same direction are aligned; opposite-facing edges across a wall are never collapsed.
+   * **Automatic Wall Normalization:** In Phase 2, thin wall guides ($< 10.5\text{ px}$) are dilated to standard architectural thickness ($11.5\text{ px} \approx 0.50\text{ ft} = 6\text{ in}$).
+   * **Clearance Assertion:** Partitions between all adjacent room pairs maintain a minimum physical clearance of $\ge 10.0\text{ px}$ ($0.45\text{--}0.72\text{ ft} = 5.2\text{--}8.6\text{ in}$), eliminating all thin-line walls across the entire blueprint.
+4. **Compact Aesthetic Room Legend Redesign:**
+   * Badge font scale reduced from $0.35 \to 0.27 / 0.23$.
+   * Dimension formatting streamlined: imperial span `W'H" x W'H"`, area `XX SQ FT (XX sq m)`.
+   * Ultra-compact 2-line layout for smaller rooms ($< 35\text{ sq ft}$): `Room ID | XX sf · W'H" x W'H"`.
+   * Overall badge card footprint reduced by $> 50\%$, providing clear visibility of architectural features while retaining legibility.
+5. **Architectural Header Placement Strictly Above the Plan:**
+   * Replaced floating corner title block with a modern, publication-grade dark architectural header banner ($90\text{ px}$ height) placed strictly at the top of the canvas ($y \in [0, 90]$).
+   * All floor plan geometries (walls, rooms, centroids, and badges) are translated down by $90\text{ px}$, guaranteeing zero occlusion of room geometries (including Room 3 balcony and Room 7 in Highlandlux Citadel).
+   * Header integrates a classic compass North arrow, super-title, full unit model name, scale invariant, and summary metric cards (`GROSS`, `BALCONY`, `NET INT`, `TARGET AREA`).
+
+#### Quantitative QA Gate 5 Verification Results
+
+Executed via Docker (`docker compose run --rm cv-floorplan python -u scripts/v5_test_blueprint.py`):
+
+| Unit Asset | Rooms | Overlap | Unclaimed Gaps | Wall Thickness (Min / Mean) | RFC 7946 GeoJSON | Scalable SVG | QA Gate 5 |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`heritage towers_a1_1 Bed 1 Bath 593 Sq. Ft.`** | 7 | **$0.0000\text{ px}^2$** | **$0.0000\text{ px}^2$** | **$6.2\text{ in}$ / $8.1\text{ in}$** | **PASS** | **PASS** | **PASS** |
+| **`highlandlux-citadel-1 Bed 1 Bath 623 Sq. Ft.`** | 10 | **$0.0000\text{ px}^2$** | **$0.0000\text{ px}^2$** | **$5.2\text{ in}$ / $6.8\text{ in}$** | **PASS** | **PASS** | **PASS** |
+| **`limestone ranch_santa fe_625sq`** | 10 | **$0.0000\text{ px}^2$** | **$0.0000\text{ px}^2$** | **$6.0\text{ in}$ / $7.4\text{ in}$** | **PASS** | **PASS** | **PASS** |
+
+#### Complete Blueprint Structural Breakdown
+
+1. **`heritage towers_a1_1 Bed 1 Bath 593 Sq. Ft.`:**
+   * **Gross Footprint:** $744.9\text{ sq ft}$ ($69.20\text{ m}^2$)
+   * **Solid Structural Walls:** $151.9\text{ sq ft}$ ($20.4\%$ structural ratio)
+   * **Net Room Area:** $593.0\text{ sq ft}$ ($541.6\text{ sq ft}$ interior conditioned $+ 51.4\text{ sq ft}$ outdoor balcony)
+   * **Wall Thicknesses:** All interior partitions $6.2\text{--}8.3\text{ in}$, exterior shell $10.9\text{ in}$.
+   * **Spatial Partition Invariant:** $0.0000\text{ px}^2$ overlap, $0.0000\text{ px}^2$ unclaimed gaps.
+
+2. **`highlandlux-citadel-1 Bed 1 Bath 623 Sq. Ft.`:**
+   * **Gross Footprint:** $752.9\text{ sq ft}$ ($69.95\text{ m}^2$)
+   * **Solid Structural Walls:** $129.9\text{ sq ft}$ ($17.3\%$ structural ratio)
+   * **Net Room Area:** $623.0\text{ sq ft}$ ($560.1\text{ sq ft}$ interior conditioned $+ 62.9\text{ sq ft}$ outdoor terrace)
+   * **Wall Thicknesses:** All interior partitions $5.2\text{--}8.6\text{ in}$, zero thin-line walls.
+   * **Spatial Partition Invariant:** $0.0000\text{ px}^2$ overlap, $0.0000\text{ px}^2$ unclaimed gaps.
+
+3. **`limestone ranch_santa fe_625sq`:**
+   * **Gross Footprint:** $781.8\text{ sq ft}$ ($72.63\text{ m}^2$)
+   * **Solid Structural Walls:** $156.8\text{ sq ft}$ ($20.1\%$ structural ratio)
+   * **Net Room Area:** $625.0\text{ sq ft}$ ($591.7\text{ interior} + 33.3\text{ outdoor balcony}$)
+   * **Wall Thicknesses:** All interior partitions $6.0\text{--}7.6\text{ in}$, exterior/balcony $8.7\text{--}14.7\text{ in}$.
+   * **Spatial Partition Invariant:** $0.0000\text{ px}^2$ overlap, $0.0000\text{ px}^2$ unclaimed gaps.
+
+#### Output Artifacts Produced
+* **Publication Blueprints (`data/output/`):**
+  * `data/output/blueprint_v5_heritage towers_a1_1 Bed 1 Bath 593 Sq. Ft..png`
+  * `data/output/blueprint_v5_heritage towers_a1_1 Bed 1 Bath 593 Sq. Ft..svg`
+  * `data/output/blueprint_v5_heritage towers_a1_1 Bed 1 Bath 593 Sq. Ft..geojson`
+  * `data/output/blueprint_v5_highlandlux-citadel-1 Bed 1 Bath 623 Sq. Ft..png`
+  * `data/output/blueprint_v5_highlandlux-citadel-1 Bed 1 Bath 623 Sq. Ft..svg`
+  * `data/output/blueprint_v5_highlandlux-citadel-1 Bed 1 Bath 623 Sq. Ft..geojson`
+  * `data/output/blueprint_v5_limestone ranch_santa fe_625sq.png`
+  * `data/output/blueprint_v5_limestone ranch_santa fe_625sq.svg`
+  * `data/output/blueprint_v5_limestone ranch_santa fe_625sq.geojson`
+* **Vector CAD & GIS Exports (`data/output/debug_v5/<unit>/`):**
+  * `blueprint.geojson`: Full RFC 7946 FeatureCollection in architectural feet coordinates.
+  * `blueprint.svg`: Scalable vector graphics blueprint with separate layers.
+  * `16_architectural_cad_blueprint.png`: High-resolution visual debug artifact.
+
 
 
 

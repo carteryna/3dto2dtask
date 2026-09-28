@@ -54,11 +54,12 @@ class SemiAutomatedTopology:
         with path.open("r", encoding="utf-8") as handle:
             self.config = yaml.safe_load(handle)
         self.params = self.config.get("v5_topology", {})
-        self.min_room_area_px = float(self.params.get("min_room_area_px", 800.0))
+        self.min_room_area_px = float(self.params.get("min_room_area_px", 500.0))
         self.door_gap_px = int(self.params.get("door_bridge_gap_px", 95))
         self.wall_alpha_thresh = int(self.params.get("wall_alpha_thresh", 50))
         self.red_diff_thresh = int(self.params.get("red_diff_thresh", 50))
         self.red_min_thresh = int(self.params.get("red_min_thresh", 150))
+        self.standard_wall_th = float(self.params.get("standard_wall_thickness_px", 11.5))
 
     def extract_wall_mask(self, rectified_guides: Dict[str, np.ndarray]) -> np.ndarray:
         """Extract solid wall mask from no_stroke, stroke, or furniture guides."""
@@ -112,6 +113,16 @@ class SemiAutomatedTopology:
                     k_balcony = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
                     blue_rail = cv2.dilate(blue_mask, k_balcony)
                     base_wall = cv2.bitwise_or(base_wall, blue_rail)
+
+        # Standardize wall width across the blueprint if input guide has thin lines (< 10 px)
+        dt = cv2.distanceTransform((base_wall > 0).astype(np.uint8), cv2.DIST_L2, 3)
+        if np.any(dt > 1):
+            mean_th = float(dt[dt > 1].mean() * 2)
+            if mean_th < self.standard_wall_th - 1.0:
+                delta_rad = min(2, max(1, int(round((self.standard_wall_th - mean_th) / 2.0))))
+                k_size = delta_rad * 2 + 1
+                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k_size, k_size))
+                base_wall = cv2.dilate(base_wall, kernel)
 
         return base_wall
 
