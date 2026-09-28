@@ -189,8 +189,8 @@ Development proceeds through five strict stage gates. No phase begins until the 
 | Phase | Module | Status | QA Gate Metric | Gate Result |
 | :---: | :--- | :---: | :--- | :---: |
 | **1** | `rectification.py` | **Done** | Vertical axis skew $\le 1.0^\circ$, 1:1 synchronous warp | **PASS (0.13° - 0.33°)** |
-| **2** | `topology.py` | Next | 100% closed room cycles, zero door leakage | Pending |
-| **3** | `geometry.py` | Pending | Overlap $= 0.0000\text{ px}^2$, Gaps $= 0.0000\text{ px}^2$, Ortho dev $\le 0.5^\circ$ | Pending |
+| **2** | `topology.py` | **Done** | 100% closed room cycles, zero door leakage | **PASS (0 px overlap, 100% closed)** |
+| **3** | `geometry.py` | Next | Overlap $= 0.0000\text{ px}^2$, Gaps $= 0.0000\text{ px}^2$, Ortho dev $\le 0.5^\circ$ | Pending |
 | **4** | `scale.py` | Pending | Conformal area error $\le 3.0\%$, Fixture sanity check $\pm 10\%$ | Pending |
 | **5** | `visualizer.py` / `export.py` | Pending | RFC 7946 GeoJSON, SVG blueprint, publication PNG | Pending |
 
@@ -250,4 +250,86 @@ Executed via Docker (`docker compose run --rm cv-floorplan python scripts/v5_tes
 1. **Vanishing Point Accuracy via Red Centerlines:** Deriving $VP_v$ from the red centerline guide rather than raw image textures eliminated false-positive perspective lines caused by diagonal bed headboards, drapery folds, and radial shadows.
 2. **Preservation of Floor Plane Area:** Because homography is parameterized as a 1D vertical pitch rather than a full 8-DOF planar homography, horizontal room widths remain strictly invariant while vertical foreshortening is uniformly unrolled.
 3. **Zero Sub-Pixel Guide Drift:** Using the identical transformation matrix $H$ across all render and guide layers ensured zero pixel shift between the floor image and the structural guides.
+
+---
+
+### Phase 2: Topological Extraction & Axial Door Bridging
+
+#### Deliverables
+* `src/v5_semi_automated/topology.py`: Implements `SemiAutomatedTopology` with multi-format guide ingestion, solid wall extraction, constrained axial door bridging, building envelope extraction, and closed room cycle isolation.
+* `src/v5_semi_automated/__init__.py`: Exported Phase 2 data structures (`TopologicalRoomNode`, `TopologyResult`, `SemiAutomatedTopology`).
+* `configs/config.yaml`: Added `v5_topology` configuration parameters (`min_room_area_px: 800.0`, `door_bridge_gap_px: 95`, `wall_alpha_thresh: 50`, `red_diff_thresh: 50`, `red_min_thresh: 150`).
+* `scripts/v5_test_topology.py`: Visual and quantitative verification script testing all units against QA Gate 2 criteria.
+
+#### Topological Mechanics & Formulations
+1. **Multi-Format Guide Ingestion:**
+   * Natively ingests any available guide format: `center_line` (red axes), `no_stroke` (solid wall body), or `stroke` (perimeter-bordered wall).
+   * When both centerline and solid wall body are available, executes a cooperative fusion where the solid wall envelope acts as a topological constraint on the centerline graph.
+2. **Constrained Axial Doorway Bridging:**
+   * Architectural 3D renders frequently feature open door swings (e.g., $45^\circ$ or $90^\circ$ open interior doors), leaving gaps along partition wall centerlines (e.g., an 85 px gap in Limestone Ranch).
+   * Unconstrained morphological dilation bridges these door openings but violently bleeds into narrow closets (erasing 23 px storage spaces) or carves artificial bridges across living areas.
+   * **The Wall-Constrained Formulation:**
+     $$\mathcal{B} = \mathcal{L}_{\text{center}} \cup \left( \left[ \mathcal{C}_{H}(\mathcal{L}_{\text{center}}, K) \cup \mathcal{C}_{V}(\mathcal{L}_{\text{center}}, K) \right] \cap \mathcal{M}_{\text{wall}} \right)$$
+     where $K = 95\text{ px}$ 1D directional kernels bridge doorway openings along wall axes, but the intersection with $\mathcal{M}_{\text{wall}}$ mathematically guarantees that no bridged stroke can cross a room interior.
+3. **Exterior Footprint Envelope Isolation:**
+   * Extracts the exterior contour of $\mathcal{M}_{\text{wall}}$ and fills its interior to construct $\mathcal{M}_{\text{envelope}}$, defining the valid interior boundary of the apartment unit.
+4. **Closed Room Cycle Decomposition:**
+   * Evaluates interior walkable space:
+     $$\mathcal{M}_{\text{interior}} = \mathcal{M}_{\text{envelope}} \setminus \mathcal{M}_{\text{wall}}$$
+   * Computes disjoint connected components $\mathcal{C}_i$ on $\mathcal{M}_{\text{interior}}$ with $\text{Area}(\mathcal{C}_i) \ge \text{min\_room\_area\_px}$.
+   * Extracts clean perimeter contours, centroids $(c_x, c_y)$, bounding boxes, and architectural room category priors (Living, Primary Bedroom, Secondary Bedroom, Bathroom, Balcony, Closet).
+
+#### Quantitative QA Gate 2 Verification Results
+
+Executed via Docker (`docker compose run --rm cv-floorplan python scripts/v5_test_topology.py`):
+
+| Unit Asset | Closed Rooms Extracted | Expected Min Rooms | Inter-Room Overlap | QA Gate 2 |
+| :--- | :---: | :---: | :---: | :---: |
+| **`heritage towers_a1_1 Bed 1 Bath 593 Sq. Ft.`** | **6** | 6 | **0 px** | **PASS** |
+| **`highlandlux-citadel-1 Bed 1 Bath 623 Sq. Ft.`** | **9** | 9 | **0 px** | **PASS** |
+| **`limestone ranch_santa fe_625sq`** | **9** | 9 | **0 px** | **PASS** |
+
+#### Extracted Room Inventory Breakdown
+
+1. **`heritage towers` (6 Closed Rooms):**
+   * Room 1: `LIVING / DINING / KITCHEN` (165,295 px, centroid (511.9, 361.8))
+   * Room 2: `PRIMARY BEDROOM` (64,815 px, centroid (825.5, 300.0))
+   * Room 3: `BATHROOM` (30,236 px, centroid (905.0, 534.2))
+   * Room 4: `WALK-IN CLOSET` (25,031 px, centroid (762.1, 554.0))
+   * Room 5: `FOYER / COAT CLOSET` (5,452 px, centroid (715.5, 461.4))
+   * Room 6: `BALCONY` (5,123 px, centroid (385.2, 425.0))
+
+2. **`highlandlux-citadel` (9 Closed Rooms):**
+   * Room 1: `LIVING / DINING / KITCHEN` (117,648 px, centroid (224.0, 303.1))
+   * Room 2: `PRIMARY BEDROOM` (66,098 px, centroid (500.3, 332.5))
+   * Room 3: `SECONDARY BEDROOM / DEN` (28,922 px, centroid (422.8, 118.0))
+   * Room 4: `BATHROOM` (21,487 px, centroid (572.3, 115.6))
+   * Room 5: `BALCONY` (8,977 px, centroid (58.4, 117.6))
+   * Room 6: `PATIO / TERRACE` (8,716 px, centroid (598.4, 556.4))
+   * Room 7: `WALK-IN CLOSET` (4,503 px, centroid (293.9, 47.9))
+   * Room 8: `PANTRY / UTILITY` (1,718 px, centroid (144.4, 225.3))
+   * Room 9: `LINEN / ENTRY CLOSET` (1,223 px, centroid (335.5, 106.9))
+
+3. **`limestone ranch` (9 Closed Rooms):**
+   * Room 1: `LIVING / DINING / KITCHEN` (141,291 px, centroid (521.3, 412.1))
+   * Room 2: `PRIMARY BEDROOM` (83,737 px, centroid (817.1, 320.2))
+   * Room 3: `COVERED PATIO / BALCONY` (28,085 px, centroid (833.9, 619.3))
+   * Room 4: `BATHROOM` (18,847 px, centroid (882.6, 494.0))
+   * Room 5: `WALK-IN CLOSET` (9,533 px, centroid (352.1, 609.5))
+   * Room 6: `PANTRY / UTILITY` (5,749 px, centroid (673.0, 587.9))
+   * Room 7: `BALCONY STORAGE` (5,511 px, centroid (424.4, 111.5))
+   * Room 8: `ENTRY CLOSET` (2,938 px, centroid (352.3, 516.5))
+   * Room 9: `LINEN CLOSET` (1,503 px, centroid (688.8, 497.9))
+
+#### Visual Debug Artifacts Generated (`data/output/debug_v5/<unit>/`)
+* `06_topological_wall_mask.png`: Binary mask of structural walls with bridged door openings.
+* `07_bridged_centerline_mask.png`: 1D wall centerline network rendered in electric cyan.
+* `08_topological_rooms_overlay.png`: Publication-grade composite with distinct pastel room fills, solid dark borders, and text badges showing `#ID Label (Area px)`.
+* `09_room_seeds_centroids.png`: Point seeds and centroids plotted directly onto the rectified render.
+
+#### Key Engineering Insights
+1. **Zero Overlap by Construction:** Because rooms are derived as the connected components of the complement of the closed wall network ($\mathcal{M}_{\text{interior}}$), mutual overlap between any two room masks is mathematically guaranteed to be **$0\text{ px}$**.
+2. **Door Bridging Without Narrow-Room Corruption:** Constraining the axial closing within the physical wall envelope solved the persistent problem from Iteration 2 and 4 where door-closing kernels erased small 20–30 px closets or bridged open-plan living rooms.
+3. **Pristine Seed Generation for Geometry:** Every room now has a stable, well-defined centroid and solid footprint mask, providing inputs for Phase 3 Manhattan polygonization.
+
 

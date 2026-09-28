@@ -208,5 +208,13 @@ v5_rectification:
   guide_dir: "human_semantic_guide"
   output_dir: "data/output/debug_v5"
 
+v5_topology:
+  min_room_area_px: 800.0
+  door_bridge_gap_px: 95
+  wall_alpha_thresh: 50
+  red_diff_thresh: 50
+  red_min_thresh: 150
+
+
 
 
