@@ -273,11 +273,14 @@ Executed via Docker (`docker compose run --rm cv-floorplan python scripts/v5_tes
      where $K = 95\text{ px}$ 1D directional kernels bridge doorway openings along wall axes, but the intersection with $\mathcal{M}_{\text{wall}}$ mathematically guarantees that no bridged stroke can cross a room interior.
 3. **Exterior Footprint Envelope Isolation:**
    * Extracts the exterior contour of $\mathcal{M}_{\text{wall}}$ and fills its interior to construct $\mathcal{M}_{\text{envelope}}$, defining the valid interior boundary of the apartment unit.
-4. **Closed Room Cycle Decomposition:**
+4. **Closed Room Cycle Decomposition & Hybrid Labeling Strategy:**
    * Evaluates interior walkable space:
      $$\mathcal{M}_{\text{interior}} = \mathcal{M}_{\text{envelope}} \setminus \mathcal{M}_{\text{wall}}$$
-   * Computes disjoint connected components $\mathcal{C}_i$ on $\mathcal{M}_{\text{interior}}$ with $\text{Area}(\mathcal{C}_i) \ge \text{min\_room\_area\_px}$.
-   * Extracts clean perimeter contours, centroids $(c_x, c_y)$, bounding boxes, and architectural room category priors (Living, Primary Bedroom, Secondary Bedroom, Bathroom, Balcony, Closet).
+   * Computes disjoint connected components $\mathcal{C}_i$ on $\mathcal{M}_{\text{interior}}$ with $\text{Area}(\mathcal{C}_i) \ge \text{min\_room\_area\_px}$, sorted by area descending.
+   * **Hybrid Labeling Architecture:**
+     - **Default (Zero Hallucination):** Assigns clean neutral identifiers (`Room 1`, `Room 2`, ..., `Room N`) alongside exact pixel area and bounding extents. Eliminates brittle heuristics that misclassify bathrooms, walk-in closets, or balconies.
+     - **Optional Human Override:** Supports optional human label files in `human_semantic_guide/` (e.g. `<unit>_labels.json` / `.yaml`) either via direct room ID mappings (`{"1": "Living Room", "2": "Primary Bedroom"}`) or coordinate click-points (`[{"label": "Kitchen", "point": [x, y]}]`).
+     - If no human labels file is provided, rooms display clean neutral IDs without visual clutter or inaccurate tags.
 
 #### Quantitative QA Gate 2 Verification Results
 
@@ -289,37 +292,37 @@ Executed via Docker (`docker compose run --rm cv-floorplan python scripts/v5_tes
 | **`highlandlux-citadel-1 Bed 1 Bath 623 Sq. Ft.`** | **9** | 9 | **0 px** | **PASS** |
 | **`limestone ranch_santa fe_625sq`** | **9** | 9 | **0 px** | **PASS** |
 
-#### Extracted Room Inventory Breakdown
+#### Extracted Room Inventory Breakdown (Neutral IDs)
 
 1. **`heritage towers` (6 Closed Rooms):**
-   * Room 1: `LIVING / DINING / KITCHEN` (165,295 px, centroid (511.9, 361.8))
-   * Room 2: `PRIMARY BEDROOM` (64,815 px, centroid (825.5, 300.0))
-   * Room 3: `BATHROOM` (30,236 px, centroid (905.0, 534.2))
-   * Room 4: `WALK-IN CLOSET` (25,031 px, centroid (762.1, 554.0))
-   * Room 5: `FOYER / COAT CLOSET` (5,452 px, centroid (715.5, 461.4))
-   * Room 6: `BALCONY` (5,123 px, centroid (385.2, 425.0))
+   * Room 1: `Room 1` (165,295 px, centroid (511.9, 361.8))
+   * Room 2: `Room 2` (64,815 px, centroid (825.5, 300.0))
+   * Room 3: `Room 3` (30,236 px, centroid (905.0, 534.2))
+   * Room 4: `Room 4` (25,031 px, centroid (762.1, 554.0))
+   * Room 5: `Room 5` (5,452 px, centroid (715.5, 461.4))
+   * Room 6: `Room 6` (5,123 px, centroid (385.2, 425.0))
 
 2. **`highlandlux-citadel` (9 Closed Rooms):**
-   * Room 1: `LIVING / DINING / KITCHEN` (117,648 px, centroid (224.0, 303.1))
-   * Room 2: `PRIMARY BEDROOM` (66,098 px, centroid (500.3, 332.5))
-   * Room 3: `SECONDARY BEDROOM / DEN` (28,922 px, centroid (422.8, 118.0))
-   * Room 4: `BATHROOM` (21,487 px, centroid (572.3, 115.6))
-   * Room 5: `BALCONY` (8,977 px, centroid (58.4, 117.6))
-   * Room 6: `PATIO / TERRACE` (8,716 px, centroid (598.4, 556.4))
-   * Room 7: `WALK-IN CLOSET` (4,503 px, centroid (293.9, 47.9))
-   * Room 8: `PANTRY / UTILITY` (1,718 px, centroid (144.4, 225.3))
-   * Room 9: `LINEN / ENTRY CLOSET` (1,223 px, centroid (335.5, 106.9))
+   * Room 1: `Room 1` (117,648 px, centroid (224.0, 303.1))
+   * Room 2: `Room 2` (66,098 px, centroid (500.3, 332.5))
+   * Room 3: `Room 3` (28,922 px, centroid (422.8, 118.0))
+   * Room 4: `Room 4` (21,487 px, centroid (572.3, 115.6))
+   * Room 5: `Room 5` (8,977 px, centroid (58.4, 117.6))
+   * Room 6: `Room 6` (8,716 px, centroid (598.4, 556.4))
+   * Room 7: `Room 7` (4,503 px, centroid (293.9, 47.9))
+   * Room 8: `Room 8` (1,718 px, centroid (144.4, 225.3))
+   * Room 9: `Room 9` (1,223 px, centroid (335.5, 106.9))
 
 3. **`limestone ranch` (9 Closed Rooms):**
-   * Room 1: `LIVING / DINING / KITCHEN` (141,291 px, centroid (521.3, 412.1))
-   * Room 2: `PRIMARY BEDROOM` (83,737 px, centroid (817.1, 320.2))
-   * Room 3: `COVERED PATIO / BALCONY` (28,085 px, centroid (833.9, 619.3))
-   * Room 4: `BATHROOM` (18,847 px, centroid (882.6, 494.0))
-   * Room 5: `WALK-IN CLOSET` (9,533 px, centroid (352.1, 609.5))
-   * Room 6: `PANTRY / UTILITY` (5,749 px, centroid (673.0, 587.9))
-   * Room 7: `BALCONY STORAGE` (5,511 px, centroid (424.4, 111.5))
-   * Room 8: `ENTRY CLOSET` (2,938 px, centroid (352.3, 516.5))
-   * Room 9: `LINEN CLOSET` (1,503 px, centroid (688.8, 497.9))
+   * Room 1: `Room 1` (141,291 px, centroid (521.3, 412.1))
+   * Room 2: `Room 2` (83,737 px, centroid (817.1, 320.2))
+   * Room 3: `Room 3` (28,085 px, centroid (833.9, 619.3))
+   * Room 4: `Room 4` (18,847 px, centroid (882.6, 494.0))
+   * Room 5: `Room 5` (9,533 px, centroid (352.1, 609.5))
+   * Room 6: `Room 6` (5,749 px, centroid (673.0, 587.9))
+   * Room 7: `Room 7` (5,511 px, centroid (424.4, 111.5))
+   * Room 8: `Room 8` (2,938 px, centroid (352.3, 516.5))
+   * Room 9: `Room 9` (1,503 px, centroid (688.8, 497.9))
 
 #### Visual Debug Artifacts Generated (`data/output/debug_v5/<unit>/`)
 * `06_topological_wall_mask.png`: Binary mask of structural walls with bridged door openings.

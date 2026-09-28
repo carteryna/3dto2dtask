@@ -74,7 +74,10 @@ def render_rooms_overlay(
 
         # Draw room label & area callout
         cx, cy = int(round(room.centroid[0])), int(round(room.centroid[1]))
-        label_text = f"#{room.room_id} {room.label}"
+        if room.label == f"Room {room.room_id}":
+            label_text = room.label
+        else:
+            label_text = f"#{room.room_id} {room.label}"
         area_text = f"{int(room.area_px):,} px"
 
         # Text banner

@@ -152,6 +152,7 @@ class SemiAutomatedTopology:
         self,
         wall_mask: np.ndarray,
         envelope_mask: np.ndarray,
+        human_labels: Optional[Dict | List] = None,
     ) -> List[TopologicalRoomNode]:
         """Extract closed room cycles from the interior footprint."""
         interior = cv2.bitwise_and(envelope_mask, cv2.bitwise_not(wall_mask))
@@ -163,7 +164,7 @@ class SemiAutomatedTopology:
             if area >= self.min_room_area_px:
                 valid_indices.append(i)
 
-        # Sort room indices by area descending
+        # Sort room indices by area descending (Room 1 is largest)
         valid_indices.sort(key=lambda idx: stats[idx, cv2.CC_STAT_AREA], reverse=True)
 
         rooms: List[TopologicalRoomNode] = []
@@ -183,8 +184,8 @@ class SemiAutomatedTopology:
             cnts, _ = cv2.findContours(mask_i, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             contour = cnts[0] if cnts else np.empty((0, 1, 2), dtype=np.int32)
 
-            # Heuristic architectural category tag based on relative area and bbox aspect
-            label = self._infer_preliminary_label(rank, len(valid_indices), area, bbox)
+            # Assign human label if provided, else neutral Room ID (zero heuristic hallucination)
+            label = self._resolve_room_label(room_id, mask_i, (cx, cy), human_labels)
 
             rooms.append(
                 TopologicalRoomNode(
@@ -200,38 +201,84 @@ class SemiAutomatedTopology:
 
         return rooms
 
-    def _infer_preliminary_label(
+    def _resolve_room_label(
         self,
-        rank: int,
-        total_rooms: int,
-        area: float,
-        bbox: Tuple[int, int, int, int],
+        room_id: int,
+        room_mask: np.ndarray,
+        centroid: Tuple[float, float],
+        human_labels: Optional[Dict | List],
     ) -> str:
-        """Assign preliminary architectural label based on relative area and aspect ratio."""
-        x, y, w, h = bbox
-        aspect = max(w, h) / (min(w, h) + 1e-4)
+        """Resolve room label from human annotations or default to neutral Room {id}."""
+        if not human_labels:
+            return f"Room {room_id}"
 
-        if rank == 0:
-            return "LIVING / DINING / KITCHEN"
-        if rank == 1:
-            return "PRIMARY BEDROOM"
-        if rank == 2 and total_rooms >= 7 and aspect < 1.8:
-            return "SECONDARY BEDROOM"
-        if aspect > 2.5:
-            return "BALCONY"
-        if area < 6000:
-            return "CLOSET"
-        if area < 32000:
-            return "BATHROOM"
-        return f"ROOM_{rank + 1}"
+        # 1. Direct ID dictionary: {"1": "Living Room", 2: "Bedroom"}
+        if isinstance(human_labels, dict):
+            str_id = str(room_id)
+            if str_id in human_labels:
+                return str(human_labels[str_id])
+            if room_id in human_labels:
+                return str(human_labels[room_id])
+
+            # Spatial point dict: {"Living Room": [x, y], "Bedroom": [x, y]}
+            h, w = room_mask.shape[:2]
+            for lbl, pt in human_labels.items():
+                if isinstance(pt, (list, tuple)) and len(pt) >= 2:
+                    px, py = int(round(pt[0])), int(round(pt[1]))
+                    if 0 <= px < w and 0 <= py < h and room_mask[py, px] > 0:
+                        return str(lbl)
+
+        # 2. List of point annotations: [{"label": "Kitchen", "point": [x, y]}]
+        elif isinstance(human_labels, list):
+            h, w = room_mask.shape[:2]
+            for item in human_labels:
+                if isinstance(item, dict) and "label" in item and "point" in item:
+                    pt = item["point"]
+                    if len(pt) >= 2:
+                        px, py = int(round(pt[0])), int(round(pt[1]))
+                        if 0 <= px < w and 0 <= py < h and room_mask[py, px] > 0:
+                            return str(item["label"])
+
+        return f"Room {room_id}"
+
+    def load_human_labels_for_unit(self, unit_key: str) -> Optional[Dict | List]:
+        """Optionally load human label annotations from guide_dir if present."""
+        guide_dir = Path(self.params.get("guide_dir", "human_semantic_guide"))
+        if not guide_dir.is_dir():
+            return None
+
+        # Check for <unit_key>_labels.json or <unit_key>_labels.yaml
+        for p in guide_dir.glob("*_labels.*"):
+            from src.v5_semi_automated.rectification import normalize_unit_key
+            if normalize_unit_key(p.stem) == unit_key or unit_key in p.stem.lower():
+                import json
+                try:
+                    if p.suffix.lower() == ".json":
+                        with p.open("r", encoding="utf-8") as f:
+                            return json.load(f)
+                    elif p.suffix.lower() in (".yaml", ".yml"):
+                        with p.open("r", encoding="utf-8") as f:
+                            return yaml.safe_load(f)
+                except Exception:
+                    pass
+        return None
 
     def process(
         self,
         rectified_guides: Dict[str, np.ndarray],
         unit_key: str = "",
+        human_labels: Optional[Dict | List] = None,
     ) -> TopologyResult:
         """Execute Phase 2 topological extraction and door bridging."""
         notes: List[str] = []
+
+        # Optional human label annotations
+        if human_labels is None:
+            human_labels = self.load_human_labels_for_unit(unit_key)
+        if human_labels:
+            notes.append(f"Loaded human label annotations for unit '{unit_key}'.")
+        else:
+            notes.append("No human labels provided; defaulting to neutral Room IDs (Room 1, Room 2, ...).")
 
         # 1. Wall Mask Extraction
         wall_mask = self.extract_wall_mask(rectified_guides)
@@ -251,7 +298,7 @@ class SemiAutomatedTopology:
         notes.append(f"Extracted building envelope ({np.sum(envelope_mask > 0)} total footprint pixels).")
 
         # 5. Extract Closed Room Cycles
-        rooms = self.extract_rooms(wall_mask, envelope_mask)
+        rooms = self.extract_rooms(wall_mask, envelope_mask, human_labels=human_labels)
         notes.append(f"Identified {len(rooms)} closed topological room cycles.")
 
         return TopologyResult(
